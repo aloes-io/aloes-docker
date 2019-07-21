@@ -1,0 +1,51 @@
+worker_processes 4;
+
+events { 
+	worker_connections 1024; 
+}
+
+http {
+
+	# map $http_origin $cors_header {
+	#     default "";
+	#     "~^https?://[^/]+\.${NGINX_ALOES_DOMAIN}\.${NGINX_ALOES_EXTENSION}(:[0-9]+)?$" "$http_origin";
+	# }
+
+	upstream aloes_clients {
+	    server client:${HTTP_CLIENT_PORT};
+	}
+
+	server {
+		listen ${NGINX_ALOES_CLIENT_PORT};
+		listen [::]:${NGINX_ALOES_CLIENT_PORT};
+
+	    location / {
+	        proxy_pass http://aloes_clients;
+	    }
+
+	}
+
+	upstream aloes_api_servers {
+	    server api:${HTTP_SERVER_PORT};
+	    # server aloes-docker_api_1:8000 weight=1;
+	}
+
+	server {
+	    listen ${NGINX_ALOES_API_PORT};
+	    listen [::]:${NGINX_ALOES_API_PORT};
+
+	    location / {
+	        # proxy_set_header Access-Control-Allow-Origin $cors_header;
+	        # proxy_set_header Host $host;
+	        # proxy_set_header X-Real-IP $remote_addr;
+	        # proxy_set_header x-forwarded-for $proxy_add_x_forwarded_for;
+	        # proxy_set_header   X-Forwarded-Host $server_name;
+	        proxy_pass http://aloes_api_servers/;
+	        proxy_redirect off;
+	        proxy_http_version 1.1;
+	        # proxy_set_header Upgrade $http_upgrade;
+	        proxy_set_header Connection "upgrade";
+	    }  
+	}
+
+}

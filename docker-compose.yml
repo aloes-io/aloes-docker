@@ -1,0 +1,109 @@
+version: '3.7'
+
+services:
+  api:
+    env_file: ./config/device-manager/.env
+    build:
+      context: https://framagit.org/aloes/device-manager.git#staging
+      dockerfile: ${NODE_ENV}.dockerfile
+    image: device-manager:test
+    expose:
+      - '${HTTP_SERVER_PORT}'
+      - '${MQTT_BROKER_PORT}'
+      - '${MQTTS_BROKER_PORT}'
+    ports:
+      - '${HTTP_SERVER_PORT}:${HTTP_SERVER_PORT}'
+      - '${MQTT_BROKER_PORT}:${MQTT_BROKER_PORT}'
+      - '${MQTTS_BROKER_PORT}:${MQTTS_BROKER_PORT}'
+    depends_on:
+      - mongo
+      - influxdb
+      - redis
+    volumes:
+      - ./config/device-manager/.env:/home/node/device-manager/.env
+      - ./config/device-manager/device-manager-local.key:/home/node/device-manager/deploy/device-manager-local.key
+      - ./config/device-manager/device-manager-local.crt:/home/node/device-manager/deploy/device-manager-local.crt
+      # - /opt/device-manager-${NODE_ENV}-storage:/home/node/${NODE_NAME}/storage
+    links:
+      - mongo
+      - redis
+      - influxdb
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '100MB'
+        max-file: '3'
+
+  client:
+    build:
+      context: https://framagit.org/aloes/aloes-client.git#staging
+      dockerfile: ${NODE_ENV}.dockerfile
+      args: 
+        - VUE_APP_NAME=${VUE_APP_NAME}
+        - VUE_APP_ROOT_API=${VUE_APP_ROOT_API}
+        - VUE_APP_DOMAIN=${VUE_APP_DOMAIN}
+        - VUE_APP_SERVER_URL=${VUE_APP_SERVER_URL}
+        - VUE_APP_BROKER_URL=${VUE_APP_BROKER_URL}
+        - VUE_APP_CLIENT_URL=${VUE_APP_CLIENT_URL}
+        - VUE_APP_LOGGER_LEVEL=${VUE_APP_LOGGER_LEVEL}
+        - GIT_REPO_SSH_URL=git@framagit.org:aloes/aloes-client.git
+    expose:
+      - '80'
+      - '8002'
+    ports:
+      - '8080:80'
+    # command: ["nginx", "-g", "daemon off;"]
+
+  mongo:
+    image: mongo:4.1.13
+    restart: always
+    env_file: ./config/mongo/.env
+    volumes:
+      - ./config/mongo/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+      - mongovolume:/data/db
+
+  influxdb:
+    image: influxdb:1.7-alpine
+    env_file: ./config/influxdb/.env
+    volumes:
+      - influxvolume:/var/lib/influxdb
+
+  redis:
+    image: redis:5-alpine
+    volumes:
+      - redisvolume:/data
+      # - ./config/redis/redis.conf:/usr/local/etc/redis/redis.conf
+    # command: ['redis-server', '/usr/local/etc/redis/redis.conf']
+
+  proxy:
+    # image: nginx:1.16-alpine
+    image: nginx:1.16
+    restart: always
+    links:
+     - api
+     - client
+    ports:
+      - "8001:81"
+      - "8002:82"
+      # - "80:80"
+      # - "443:443"
+    depends_on:
+      - api
+      - client
+    environment:
+      - NGINX_ALOES_CLIENT_HOST=${NGINX_ALOES_CLIENT_HOST}
+      - NGINX_ALOES_CLIENT_PORT=${NGINX_ALOES_CLIENT_PORT}
+      - NGINX_ALOES_API_HOST=${NGINX_ALOES_API_HOST}
+      - NGINX_ALOES_API_PORT=${NGINX_ALOES_API_PORT}
+      - HTTP_CLIENT_PORT=${HTTP_CLIENT_PORT}
+      - HTTP_SERVER_PORT=${HTTP_SERVER_PORT}
+    volumes:
+      - ./config/nginx/nginx-${NODE_ENV}.template:/etc/nginx/nginx.template
+      # - ./config/nginx/nginx-${NODE_ENV}.conf:/etc/nginx/nginx.conf:ro
+    # command: [nginx, '-g', 'daemon off;']
+    command: /bin/bash -c "envsubst < /etc/nginx/nginx.template > /etc/nginx/nginx.conf && exec nginx -g 'daemon off;'"
+
+volumes:
+  mongovolume:
+  redisvolume:
+  influxvolume:

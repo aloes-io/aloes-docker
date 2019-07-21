@@ -1,0 +1,8 @@
+.DS_Store
+
+#config files
+.env
+/config/*/.env
+.env.local
+*.crt
+*.key

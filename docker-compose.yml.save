@@ -1,0 +1,88 @@
+version: '3.7'
+
+services:
+  api:
+    env_file: ./config/device-manager/.env
+    image: getlarge/device-manager:0.5
+    ports:
+      - '${HTTP_SERVER_PORT}:${HTTP_SERVER_PORT}'
+      - '${MQTT_BROKER_PORT}:${MQTT_BROKER_PORT}'
+      - '${MQTTS_BROKER_PORT}:${MQTTS_BROKER_PORT}'
+    depends_on:
+      - mongo
+      - influxdb
+      - redis
+    volumes:
+      - /opt/device-manager-${NODE_ENV}-storage:/home/node/${NODE_NAME}/storage
+    links:
+      - mongo
+      - redis
+      - influxdb
+    restart: on-failure
+    deploy:
+      resources:
+        limits:
+          memory: 500M
+        reservations:
+          memory: 200M
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '100MB'
+        max-file: '3'
+
+  client:
+    # env_file: ./config/aloes-client/.env
+    image: getlarge/aloes-client:test
+    ports:
+      - '8080:80'
+    depends_on:
+      - nginx
+
+  mongo:
+    image: mongo:4.1.13
+    restart: always
+    env_file: ./config/mongo/.env
+    volumes:
+      - ./config/mongo/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+      - mongovolume:/data/db
+
+  influxdb:
+    image: influxdb:1.7-alpine
+    env_file: ./config/influxdb/.env
+    volumes:
+      - influxvolume:/var/lib/influxdb
+
+  redis:
+    image: redis:5-alpine
+    volumes:
+      - redisvolume:/data
+      # - ./config/redis/redis.conf:/usr/local/etc/redis/redis.conf
+    # command: ['redis-server', '/usr/local/etc/redis/redis.conf']
+
+  nginx:
+    image: nginx:1.16-alpine
+    restart: always
+    links:
+      - api:devicemanager
+      - client:aloesclient
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./config/nginx:/etc/nginx/conf.d
+      - ./config/certbot/conf:/etc/letsencrypt
+      - ./config/certbot/www:/var/www/certbot
+    command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
+
+  certbot:
+    image: certbot/certbot
+    volumes:
+      - ./config/certbot/conf:/etc/letsencrypt
+      - ./config/certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+
+volumes:
+  mongovolume:
+  redisvolume:
+  influxvolume:
