@@ -6,7 +6,7 @@ networks:
 
 services:
   mongo:
-    env_file: ./config/mongo/.env.local
+    env_file: ./config/mongo/.env
     image: mongo:4.1.13
     restart: always
     volumes:
@@ -14,7 +14,7 @@ services:
       - mongovolume:/data/db
 
   influxdb:
-    env_file: ./config/influxdb/.env.local
+    env_file: ./config/influxdb/.env
     image: influxdb:1.7-alpine
     volumes:
       - influxvolume:/var/lib/influxdb
@@ -54,7 +54,7 @@ services:
       - channel__port=3456
       - nats__hosts=nats-a:4222,nats-b:4222,nats-c:4222
       - seeds=timer-1:3455,timer-2:3456
-      - storage__backend=leveldown
+      - storage__backend=memdown
       - storage__path=/var/data/skyring
     networks:
       - skyring
@@ -133,7 +133,6 @@ services:
       -c /tmp/a.conf -D
     networks:
       - skyring
-
   nats-b:
     image: nats:latest
     volumes:
@@ -144,7 +143,6 @@ services:
       - nats-a
     networks:
       - skyring
-
   nats-c:
     image: nats:latest
     volumes:
@@ -172,9 +170,9 @@ services:
       - timer-5
 
   api:
-    env_file: ./config/device-manager/.env.local
+    env_file: ./config/device-manager/.env
     build:
-      context: https://framagit.org/aloes/device-manager.git#dev
+      context: https://framagit.org/aloes/device-manager.git#staging
       dockerfile: local.dockerfile
     image: device-manager:test
     expose:
@@ -193,9 +191,9 @@ services:
       - redis
       - timer-proxy
     volumes:
-      - ./config/device-manager/.env.local:/home/node/device-manager/.env:ro
-      - ./config/device-manager/device-manager-local.key:/home/node/device-manager/deploy/device-manager-local.key:ro
-      - ./config/device-manager/device-manager-local.crt:/home/node/device-manager/deploy/device-manager-local.crt:ro
+      - ./config/device-manager/.env:/home/node/device-manager/.env:ro
+      - ./config/certbot/conf/live/${NGINX_SERVER_HOST}/privkey.pem:/home/node/device-manager/deploy/device-manager-prod-key.pem:ro
+      - ./config/certbot/conf/live/${NGINX_SERVER_HOST}/fullchain.pem:/home/node/device-manager/deploy/device-manager-prod-cert.pem:ro
       # - /opt/device-manager-${NODE_ENV}-storage:/home/node/${NODE_NAME}/storage
     links:
       - mongo
@@ -231,19 +229,15 @@ services:
         - VUE_APP_CLIENT_URL=${VUE_APP_CLIENT_URL}
         - VUE_APP_LOGGER_LEVEL=${VUE_APP_LOGGER_LEVEL}
         - GIT_REPO_SSH_URL=git@framagit.org:aloes/aloes-client.git
-    depends_on:
-      - api
     ports:
       - '${HTTP_CLIENT_PORT}:${HTTP_CLIENT_PORT}'
     expose:
       - ${HTTP_CLIENT_PORT}
-      - ${HTTP_SERVER_PORT}
-      # - ${WS_BROKER_PORT}
+      - ${WS_BROKER_PORT}
 
   proxy-aloes:
     environment:
       - WS_BROKER_PORT=${WS_BROKER_PORT}
-      # - NGINX_WS_BROKER_PORT=${NGINX_WS_BROKER_PORT}
       - HTTP_SERVER_PORT=${HTTP_SERVER_PORT}
       - NGINX_HTTP_SERVER_PORT=${NGINX_HTTP_SERVER_PORT}
       - HTTP_CLIENT_PORT=${HTTP_CLIENT_PORT}
@@ -259,13 +253,25 @@ services:
     ports:
       - '${NGINX_HTTP_SERVER_PORT}:${NGINX_HTTP_SERVER_PORT}'
       - '${NGINX_HTTP_CLIENT_PORT}:${NGINX_HTTP_CLIENT_PORT}'
+      # - "80:80"
+      # - "443:443"
     expose:
       - ${NGINX_HTTP_SERVER_PORT}
       - ${NGINX_HTTP_CLIENT_PORT}
     volumes:
-      - ./config/nginx/nginx-local.template:/etc/nginx/nginx.template
+      - ./config/nginx/nginx-production.template:/etc/nginx/nginx.template
       - ./log/nginx/error.log:/etc/nginx/error_log.log
-    command: /bin/bash -c "envsubst '$${HTTP_CLIENT_PORT},$${NGINX_HTTP_CLIENT_PORT},$${HTTP_SERVER_PORT},$${WS_BROKER_PORT},$${NGINX_HTTP_SERVER_PORT}' < /etc/nginx/nginx.template > /etc/nginx/nginx.conf && exec nginx -g 'daemon off;'"
+      - ./config/certbot/conf:/etc/letsencrypt
+      - ./config/certbot/www:/var/www/certbot
+    # command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
+    command: /bin/bash -c "envsubst '$${HTTP_CLIENT_PORT},$${NGINX_HTTP_CLIENT_PORT},$${NGINX_CLIENT_HOST},$${HTTP_SERVER_PORT},$${WS_BROKER_PORT},$${NGINX_HTTP_SERVER_PORT},$${NGINX_HTTP_SERVER_HOST},$${NGINX_DOMAIN},$${NGINX_EXTENSION}' < /etc/nginx/nginx.template > /etc/nginx/nginx.conf && while :; do sleep 6h & wait $${!}; nginx -s reload && done & exec nginx -g 'daemon off;'"
+
+  certbot:
+    image: certbot/certbot
+    volumes:
+      - ./config/certbot/conf:/etc/letsencrypt
+      - ./config/certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
 
 volumes:
   mongovolume:

@@ -5,6 +5,8 @@ if ! [ -x "$(command -v docker-compose)" ]; then
   exit 1
 fi
 
+# $NGINX_DOMAIN
+# $ADMIN_EMAIL
 domains=(example.org www.example.org)
 rsa_key_size=4096
 data_path="./config/certbot"
@@ -39,7 +41,8 @@ echo
 
 
 echo "### Starting nginx ..."
-docker-compose up --force-recreate -d nginx
+# docker-compose up --force-recreate -d nginx
+docker-compose up --force-recreate -d proxy-aloes
 echo
 
 echo "### Deleting dummy certificate for $domains ..."
