@@ -237,17 +237,15 @@ services:
       - '${HTTP_CLIENT_PORT}:${HTTP_CLIENT_PORT}'
     expose:
       - ${HTTP_CLIENT_PORT}
-      - ${HTTP_SERVER_PORT}
+      # - ${HTTP_SERVER_PORT}
       # - ${WS_BROKER_PORT}
 
   proxy-aloes:
     environment:
       - WS_BROKER_PORT=${WS_BROKER_PORT}
-      # - NGINX_WS_BROKER_PORT=${NGINX_WS_BROKER_PORT}
       - HTTP_SERVER_PORT=${HTTP_SERVER_PORT}
-      - NGINX_HTTP_SERVER_PORT=${NGINX_HTTP_SERVER_PORT}
       - HTTP_CLIENT_PORT=${HTTP_CLIENT_PORT}
-      - NGINX_HTTP_CLIENT_PORT=${NGINX_HTTP_CLIENT_PORT}
+      - NGINX_HTTP_SERVER_PORT=${NGINX_HTTP_SERVER_PORT}
     image: nginx:1.16
     restart: always
     depends_on:
@@ -258,14 +256,12 @@ services:
       - client
     ports:
       - '${NGINX_HTTP_SERVER_PORT}:${NGINX_HTTP_SERVER_PORT}'
-      - '${NGINX_HTTP_CLIENT_PORT}:${NGINX_HTTP_CLIENT_PORT}'
     expose:
       - ${NGINX_HTTP_SERVER_PORT}
-      - ${NGINX_HTTP_CLIENT_PORT}
     volumes:
       - ./config/nginx/nginx-local.template:/etc/nginx/nginx.template
       - ./log/nginx/error.log:/etc/nginx/error_log.log
-    command: /bin/bash -c "envsubst '$${HTTP_CLIENT_PORT},$${NGINX_HTTP_CLIENT_PORT},$${HTTP_SERVER_PORT},$${WS_BROKER_PORT},$${NGINX_HTTP_SERVER_PORT}' < /etc/nginx/nginx.template > /etc/nginx/nginx.conf && exec nginx -g 'daemon off;'"
+    command: /bin/bash -c "envsubst '$${HTTP_CLIENT_PORT},$${HTTP_SERVER_PORT},$${WS_BROKER_PORT},$${NGINX_HTTP_SERVER_PORT}' < /etc/nginx/nginx.template > /etc/nginx/nginx.conf && exec nginx -g 'daemon off;'"
 
 volumes:
   mongovolume:

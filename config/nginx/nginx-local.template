@@ -15,18 +15,6 @@ http {
 	    server client:${HTTP_CLIENT_PORT};
 	}
 
-	server {
-		listen ${NGINX_HTTP_CLIENT_PORT};
-		listen [::]:${NGINX_HTTP_CLIENT_PORT};
-
-	    location / {
-	        proxy_pass http://aloes_clients/;
-	        proxy_redirect off;
-	        proxy_http_version 1.1;
-	    }
-
-	}
-
 	upstream aloes_http_api_servers {
 	    server api:${HTTP_SERVER_PORT};
 	    # server aloes-docker_api_1:8000 weight=1;
@@ -40,7 +28,13 @@ http {
 	    listen ${NGINX_HTTP_SERVER_PORT};
 	    listen [::]:${NGINX_HTTP_SERVER_PORT};
 
-	    location / {
+ 		location / {
+	        proxy_pass http://aloes_clients;
+	        proxy_redirect off;
+	        proxy_http_version 1.1;
+	    }
+
+	    location /app/ {
 	        proxy_pass http://aloes_http_api_servers/;
 	        proxy_redirect off;
 	        proxy_http_version 1.1;

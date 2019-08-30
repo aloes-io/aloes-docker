@@ -20,44 +20,6 @@ http {
 	    server client:${HTTP_CLIENT_PORT};
 	}
 
-	server {
-		listen ${NGINX_HTTP_CLIENT_PORT};
-		listen [::]:${NGINX_HTTP_CLIENT_PORT};
-		server_name ${NGINX_HTTP_CLIENT_HOST};
-
-	    location /.well-known/acme-challenge/ {
-	        root /var/www/certbot;
-	    }
-
-		location / {
-	        #  return 301 https://$host$request_uri;
-	    }
-	}
-
-	server {
-		listen ${NGINX_HTTPS_CLIENT_PORT} ssl;
-		listen [::]:${NGINX_HTTPS_CLIENT_PORT}; ssl ipv6only=on; 
-		server_name ${NGINX_CLIENT_HOST};
-
-		ssl_certificate /etc/letsencrypt/live/${NGINX_CLIENT_HOST}/fullchain.pem; 
-		ssl_certificate_key /etc/letsencrypt/live/${NGINX_CLIENT_HOST}/privkey.pem; 
-		include /etc/letsencrypt/options-ssl-nginx.conf;
-		ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; 
-		
-		location / {
-	        proxy_set_header Access-Control-Allow-Origin $cors_header;
-	        proxy_pass http://aloes_clients/;
-	        proxy_redirect off;
-	        proxy_http_version 1.1;
-	    }
-
-		location ~* \.(?:ico|css|js|gif|jpe?g|png)$ {
-		    expires max;
-		    add_header Pragma public;
-		    add_header Cache-Control "public, must-revalidate, proxy-revalidate";
-		}
-	}
-
 
 	upstream aloes_http_api_servers {
 	    server api:${HTTP_SERVER_PORT};
@@ -84,8 +46,8 @@ http {
 
 	server {
 	    server_name ${NGINX_HTTP_SERVER_HOST};
-	    listen ${NGINX_ALOES_HTTPS_SERVER_PORT} ssl;
-	 	listen [::]:${NGINX_ALOES_HTTPS_SERVER_PORT} ssl ipv6only=on; 
+	    listen ${NGINX_HTTPS_SERVER_PORT} ssl;
+	 	listen [::]:${NGINX_HTTPS_SERVER_PORT} ssl ipv6only=on; 
 
 	    ssl_certificate /etc/letsencrypt/live/${NGINX_HTTP_SERVER_HOST}/fullchain.pem; 
 	    ssl_certificate_key /etc/letsencrypt/live/${NGINX_HTTP_SERVER_HOST}/privkey.pem;
@@ -95,14 +57,25 @@ http {
 	    
 	    location / {
 	        proxy_set_header Access-Control-Allow-Origin $cors_header;
+	        proxy_pass http://aloes_clients;
+	        proxy_redirect off;
+	        proxy_http_version 1.1;
+	    }
+
+		location ~* \.(?:ico|css|js|gif|jpe?g|png)$ {
+		    expires max;
+		    add_header Pragma public;
+		    add_header Cache-Control "public, must-revalidate, proxy-revalidate";
+		}
+
+	    location /app/ {
+	        proxy_set_header Access-Control-Allow-Origin $cors_header;
 	        proxy_set_header Host $host;
 	        proxy_set_header X-Real-IP $remote_addr;
 	        proxy_set_header x-forwarded-for $proxy_add_x_forwarded_for;
 	        proxy_pass http://aloes_http_api_servers/;
 		    proxy_redirect off;
 	        proxy_http_version 1.1;
-	        # proxy_set_header Upgrade $http_upgrade;
-            # proxy_set_header Connection $connection_upgrade;
 	    }
 
 	    location /ws {
