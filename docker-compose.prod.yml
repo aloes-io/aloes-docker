@@ -15,12 +15,14 @@ services:
 
   influxdb:
     env_file: ./config/influxdb/.env
+    restart: always
     image: influxdb:1.7-alpine
     volumes:
       - influxvolume:/var/lib/influxdb
 
   redis:
     image: redis:5-alpine
+    restart: always
     volumes:
       - redisvolume:/data
       - ./config/redis/redis.conf:/usr/local/etc/redis/redis.conf
@@ -30,6 +32,7 @@ services:
     build:
       context: https://github.com/esatterwhite/skyring.git#master
     hostname: timer-1
+    restart: always
     environment:
       - DEBUG=*
       - channel__host=timer-1
@@ -48,6 +51,7 @@ services:
     build:
       context: https://github.com/esatterwhite/skyring.git#master
     hostname: timer-2
+    restart: always
     environment:
       - DEBUG=*
       - channel__host=timer-2
@@ -67,6 +71,7 @@ services:
     build:
       context: https://github.com/esatterwhite/skyring.git#master
     hostname: timer-3
+    restart: always
     environment:
       - DEBUG=*
       - channel__host=timer-3
@@ -87,6 +92,7 @@ services:
     build:
       context: https://github.com/esatterwhite/skyring.git#master
     hostname: timer-4
+    restart: always
     environment:
       - DEBUG=*
       - channel__host=timer-4
@@ -107,6 +113,7 @@ services:
     build:
       context: https://github.com/esatterwhite/skyring.git#master
     hostname: timer-5
+    restart: always
     environment:
       - DEBUG=*
       - channel__host=timer-5
@@ -127,14 +134,17 @@ services:
 
   nats-a:
     image: nats:latest
+    restart: always
     volumes:
       - ./config/nats:/tmp
     command: >
       -c /tmp/a.conf -D
     networks:
       - skyring
+
   nats-b:
     image: nats:latest
+    restart: always
     volumes:
       - ./config/nats:/tmp
     command: >
@@ -143,8 +153,10 @@ services:
       - nats-a
     networks:
       - skyring
+
   nats-c:
     image: nats:latest
+    restart: always
     volumes:
       - ./config/nats:/tmp
     depends_on:
@@ -156,6 +168,7 @@ services:
 
   timer-proxy:
     image: 'nginx:latest'
+    restart: always
     volumes:
       - ./config/nginx/skyring.conf:/etc/nginx/nginx.conf
     ports:
@@ -168,6 +181,14 @@ services:
       - timer-3
       - timer-4
       - timer-5
+  
+  certbot:
+    image: certbot/certbot
+    restart: always
+    volumes:
+      - ./config/certbot/conf:/etc/letsencrypt
+      - ./config/certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
 
   api:
     env_file: ./config/device-manager/.env
@@ -175,6 +196,13 @@ services:
       context: https://framagit.org/aloes/device-manager.git#staging
       dockerfile: local.dockerfile
     image: device-manager:test
+    restart: always
+    depends_on:
+      - mongo
+      - influxdb
+      - redis
+      - timer-proxy
+      - certbot
     expose:
       - '${HTTP_SERVER_PORT}'
       - '${MQTT_BROKER_PORT}'
@@ -185,15 +213,10 @@ services:
       - '${MQTT_BROKER_PORT}:${MQTT_BROKER_PORT}'
       - '${MQTTS_BROKER_PORT}:${MQTTS_BROKER_PORT}'
       - '${WS_BROKER_PORT}:${WS_BROKER_PORT}'
-    depends_on:
-      - mongo
-      - influxdb
-      - redis
-      - timer-proxy
     volumes:
       - ./config/device-manager/.env:/home/node/device-manager/.env:ro
-      - ./config/certbot/conf/live/${NGINX_SERVER_HOST}/privkey.pem:/home/node/device-manager/deploy/device-manager-prod-key.pem:ro
-      - ./config/certbot/conf/live/${NGINX_SERVER_HOST}/fullchain.pem:/home/node/device-manager/deploy/device-manager-prod-cert.pem:ro
+      - ./config/certbot/conf/live/${NGINX_HTTP_SERVER_HOST}/privkey.pem:/home/node/device-manager/device-manager-prod-key.pem:ro
+      - ./config/certbot/conf/live/${NGINX_HTTP_SERVER_HOST}/fullchain.pem:/home/node/device-manager/device-manager-prod-cert.pem:ro
       # - /opt/device-manager-${NODE_ENV}-storage:/home/node/${NODE_NAME}/storage
     links:
       - mongo
@@ -229,6 +252,10 @@ services:
         - VUE_APP_CLIENT_URL=${VUE_APP_CLIENT_URL}
         - VUE_APP_LOGGER_LEVEL=${VUE_APP_LOGGER_LEVEL}
         - GIT_REPO_SSH_URL=git@framagit.org:aloes/aloes-client.git
+    restart: always
+    depends_on:
+      - certbot
+      - api
     ports:
       - '${HTTP_CLIENT_PORT}:${HTTP_CLIENT_PORT}'
     expose:
@@ -259,18 +286,10 @@ services:
       - ${NGINX_HTTPS_SERVER_PORT}
     volumes:
       - ./config/nginx/nginx-production.template:/etc/nginx/nginx.template
-      - ./log/nginx/error.log:/etc/nginx/error_log.log
+      - ./log/nginx/:/etc/nginx/log
       - ./config/certbot/conf:/etc/letsencrypt
       - ./config/certbot/www:/var/www/certbot
-    # command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
-    command: /bin/bash -c "envsubst '$${HTTP_CLIENT_PORT},$${HTTP_SERVER_PORT},$${WS_BROKER_PORT},$${NGINX_HTTP_SERVER_PORT},$${NGINX_HTTPS_SERVER_PORT},$${NGINX_HTTP_SERVER_HOST},$${NGINX_DOMAIN},$${NGINX_EXTENSION}' < /etc/nginx/nginx.template > /etc/nginx/nginx.conf && while :; do sleep 6h & wait $${!}; nginx -s reload && done & exec nginx -g 'daemon off;'"
-
-  certbot:
-    image: certbot/certbot
-    volumes:
-      - ./config/certbot/conf:/etc/letsencrypt
-      - ./config/certbot/www:/var/www/certbot
-    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    command: /bin/bash -c "envsubst '$${HTTP_CLIENT_PORT},$${HTTP_SERVER_PORT},$${WS_BROKER_PORT},$${NGINX_HTTP_SERVER_PORT},$${NGINX_HTTPS_SERVER_PORT},$${NGINX_HTTP_SERVER_HOST},$${NGINX_DOMAIN},$${NGINX_EXTENSION}' < /etc/nginx/nginx.template > /etc/nginx/nginx.conf; while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g 'daemon off;'"
 
 volumes:
   mongovolume:

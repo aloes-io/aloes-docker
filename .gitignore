@@ -6,3 +6,4 @@
 .env.local
 *.crt
 *.key
+*.pem

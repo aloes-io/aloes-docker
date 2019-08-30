@@ -16,11 +16,13 @@ services:
   influxdb:
     env_file: ./config/influxdb/.env.local
     image: influxdb:1.7-alpine
+    restart: always
     volumes:
       - influxvolume:/var/lib/influxdb
 
   redis:
     image: redis:5-alpine
+    restart: always
     volumes:
       - redisvolume:/data
       - ./config/redis/redis.conf:/usr/local/etc/redis/redis.conf
@@ -30,6 +32,7 @@ services:
     build:
       context: https://github.com/esatterwhite/skyring.git#master
     hostname: timer-1
+    restart: always
     environment:
       - DEBUG=*
       - channel__host=timer-1
@@ -48,6 +51,7 @@ services:
     build:
       context: https://github.com/esatterwhite/skyring.git#master
     hostname: timer-2
+    restart: always
     environment:
       - DEBUG=*
       - channel__host=timer-2
@@ -67,6 +71,7 @@ services:
     build:
       context: https://github.com/esatterwhite/skyring.git#master
     hostname: timer-3
+    restart: always
     environment:
       - DEBUG=*
       - channel__host=timer-3
@@ -87,6 +92,7 @@ services:
     build:
       context: https://github.com/esatterwhite/skyring.git#master
     hostname: timer-4
+    restart: always
     environment:
       - DEBUG=*
       - channel__host=timer-4
@@ -107,6 +113,7 @@ services:
     build:
       context: https://github.com/esatterwhite/skyring.git#master
     hostname: timer-5
+    restart: always
     environment:
       - DEBUG=*
       - channel__host=timer-5
@@ -127,6 +134,7 @@ services:
 
   nats-a:
     image: nats:latest
+    restart: always
     volumes:
       - ./config/nats:/tmp
     command: >
@@ -136,6 +144,7 @@ services:
 
   nats-b:
     image: nats:latest
+    restart: always
     volumes:
       - ./config/nats:/tmp
     command: >
@@ -147,6 +156,7 @@ services:
 
   nats-c:
     image: nats:latest
+    restart: always
     volumes:
       - ./config/nats:/tmp
     depends_on:
@@ -158,6 +168,7 @@ services:
 
   timer-proxy:
     image: 'nginx:latest'
+    restart: always
     volumes:
       - ./config/nginx/skyring.conf:/etc/nginx/nginx.conf
     ports:
@@ -177,6 +188,7 @@ services:
       context: https://framagit.org/aloes/device-manager.git#dev
       dockerfile: local.dockerfile
     image: device-manager:test
+    restart: always
     expose:
       - '${HTTP_SERVER_PORT}'
       - '${MQTT_BROKER_PORT}'
@@ -194,8 +206,8 @@ services:
       - timer-proxy
     volumes:
       - ./config/device-manager/.env.local:/home/node/device-manager/.env:ro
-      - ./config/device-manager/device-manager-local.key:/home/node/device-manager/deploy/device-manager-local.key:ro
-      - ./config/device-manager/device-manager-local.crt:/home/node/device-manager/deploy/device-manager-local.crt:ro
+      - ./config/device-manager/device-manager-local-key.pem:/home/node/device-manager/device-manager-local-key.pem:ro
+      - ./config/device-manager/device-manager-local-cert.pem:/home/node/device-manager/device-manager-local-cert.pem:ro
       # - /opt/device-manager-${NODE_ENV}-storage:/home/node/${NODE_NAME}/storage
     links:
       - mongo
@@ -231,6 +243,7 @@ services:
         - VUE_APP_CLIENT_URL=${VUE_APP_CLIENT_URL}
         - VUE_APP_LOGGER_LEVEL=${VUE_APP_LOGGER_LEVEL}
         - GIT_REPO_SSH_URL=git@framagit.org:aloes/aloes-client.git
+    restart: always
     depends_on:
       - api
     ports:

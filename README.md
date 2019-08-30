@@ -2,7 +2,7 @@
 
 Compose every dependencies needed to get a fully working Aloes network
 
-## Start
+## Build
 
 ```bash
 docker-compose --compatibility  build 
@@ -22,3 +22,9 @@ docker-compose --compatibility -f docker-compose.prod.yml up
 ```bash
 docker-compose -f docker-compose.prod.yml down
 ```
+
+## Setup
+
+If you intend to run in local mode ( no domain redirection ), you just have to configure environment variables and config files.
+
+For domain name redirection with HTTPS server, configure and run `./config/certbot/letsencrypt-init.sh` 
