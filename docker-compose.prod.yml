@@ -195,14 +195,13 @@ services:
     build:
       context: https://framagit.org/aloes/device-manager.git#staging
       dockerfile: local.dockerfile
-    image: device-manager:test
+    image: device-manager:stage
     restart: always
     depends_on:
       - mongo
       - influxdb
       - redis
       - timer-proxy
-      - certbot
     expose:
       - '${HTTP_SERVER_PORT}'
       - '${MQTT_BROKER_PORT}'
@@ -254,7 +253,6 @@ services:
         - GIT_REPO_SSH_URL=git@framagit.org:aloes/aloes-client.git
     restart: always
     depends_on:
-      - certbot
       - api
     ports:
       - '${HTTP_CLIENT_PORT}:${HTTP_CLIENT_PORT}'

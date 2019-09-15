@@ -185,9 +185,9 @@ services:
   api:
     env_file: ./config/device-manager/.env.local
     build:
-      context: https://framagit.org/aloes/device-manager.git#dev
+      context: https://framagit.org/aloes/device-manager.git#staging
       dockerfile: local.dockerfile
-    image: device-manager:test
+    image: device-manager:stage
     restart: always
     expose:
       - '${HTTP_SERVER_PORT}'
