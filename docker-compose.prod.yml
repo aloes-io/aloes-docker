@@ -15,8 +15,8 @@ services:
 
   influxdb:
     env_file: ./config/influxdb/.env
-    restart: always
     image: influxdb:1.7-alpine
+    restart: always
     volumes:
       - influxvolume:/var/lib/influxdb
 
