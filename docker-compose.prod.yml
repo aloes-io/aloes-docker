@@ -193,7 +193,7 @@ services:
   api:
     env_file: ./config/device-manager/.env
     build:
-      context: https://framagit.org/aloes/device-manager.git#staging
+      context: https://framagit.org/aloes/device-manager.git#master
       dockerfile: local.dockerfile
     image: device-manager:stage
     restart: always
@@ -216,7 +216,7 @@ services:
       - ./config/device-manager/.env:/home/node/device-manager/.env:ro
       - ./config/certbot/conf/live/${NGINX_HTTP_SERVER_HOST}/privkey.pem:/home/node/device-manager/device-manager-prod-key.pem:ro
       - ./config/certbot/conf/live/${NGINX_HTTP_SERVER_HOST}/fullchain.pem:/home/node/device-manager/device-manager-prod-cert.pem:ro
-      # - /opt/device-manager-${NODE_ENV}-storage:/home/node/${NODE_NAME}/storage
+      - apivolume:/home/node/device-manager/storage
     links:
       - mongo
       - redis
@@ -240,7 +240,7 @@ services:
       - VUE_APP_LOGGER_LEVEL=${VUE_APP_LOGGER_LEVEL}
       - GIT_REPO_SSH_URL=git@framagit.org:aloes/aloes-client.git
     build:
-      context: https://framagit.org/aloes/aloes-client.git#staging
+      context: https://framagit.org/aloes/aloes-client.git#master
       dockerfile: local.dockerfile
       args:
         - VUE_APP_NAME=${VUE_APP_NAME}
@@ -268,7 +268,7 @@ services:
       - NGINX_HTTP_SERVER_HOST=${NGINX_HTTP_SERVER_HOST}
       - NGINX_HTTP_SERVER_PORT=${NGINX_HTTP_SERVER_PORT}
       - NGINX_HTTPS_SERVER_PORT=${NGINX_HTTPS_SERVER_PORT}
-    image: nginx:1.16
+    image: 'nginx:latest'
     restart: always
     depends_on:
       - api
@@ -283,8 +283,9 @@ services:
       - ${NGINX_HTTP_SERVER_PORT}
       - ${NGINX_HTTPS_SERVER_PORT}
     volumes:
+      # - ./config/nginx/nginx-tmp.template:/etc/nginx/nginx.template
       - ./config/nginx/nginx-production.template:/etc/nginx/nginx.template
-      - ./log/nginx/:/etc/nginx/log
+      - ./log/nginx:/etc/nginx/log
       - ./config/certbot/conf:/etc/letsencrypt
       - ./config/certbot/www:/var/www/certbot
     command: /bin/bash -c "envsubst '$${HTTP_CLIENT_PORT},$${HTTP_SERVER_PORT},$${WS_BROKER_PORT},$${NGINX_HTTP_SERVER_PORT},$${NGINX_HTTPS_SERVER_PORT},$${NGINX_HTTP_SERVER_HOST},$${NGINX_DOMAIN},$${NGINX_EXTENSION}' < /etc/nginx/nginx.template > /etc/nginx/nginx.conf; while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g 'daemon off;'"
@@ -293,3 +294,4 @@ volumes:
   mongovolume:
   redisvolume:
   influxvolume:
+  apivolume:

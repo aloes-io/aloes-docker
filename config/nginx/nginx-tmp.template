@@ -1,0 +1,29 @@
+worker_processes 4;
+
+events {
+        worker_connections 1024;
+}
+
+http {
+
+    server {
+        listen ${NGINX_HTTP_SERVER_PORT};
+        listen [::]:${NGINX_HTTP_SERVER_PORT};
+        server_name ${NGINX_HTTP_SERVER_HOST};
+
+        location / {
+            return 301 https://$host/$request_uri;
+        }
+
+        location /app/ {
+            return 301 https://$host/app/$request_uri;
+        }
+
+        location /.well-known/acme-challenge/ {
+            root /var/www/certbot;
+        }
+
+    }
+
+
+}

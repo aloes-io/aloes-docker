@@ -20,7 +20,6 @@ if [ -d "$data_path" ]; then
   fi
 fi
 
-
 if [ ! -e "$data_path/conf/options-ssl-nginx.conf" ] || [ ! -e "$data_path/conf/ssl-dhparams.pem" ]; then
   echo "### Downloading recommended TLS parameters ..."
   mkdir -p "$data_path/conf"
@@ -41,10 +40,10 @@ echo
 
 
 echo "### Starting nginx ..."
-# docker-compose up --force-recreate -d nginx
-# docker-compose -f docker-compose.prod.yml up --force-recreate -d proxy-aloes
-docker-compose -f docker-compose.prod.yml up --force-recreate -d proxy-aloes --no-deps
+docker-compose -f docker-compose.prod.yml up --force-recreate --no-deps -d proxy-aloes 
 echo
+
+sleep 2
 
 echo "### Deleting dummy certificate for $domains ..."
 docker-compose -f docker-compose.prod.yml run --rm --entrypoint "\
@@ -81,5 +80,4 @@ docker-compose -f docker-compose.prod.yml run --rm --entrypoint "\
 echo
 
 echo "### Reloading nginx ..."
-# docker-compose exec nginx nginx -s reload
 docker-compose -f docker-compose.prod.yml exec proxy-aloes nginx -s reload

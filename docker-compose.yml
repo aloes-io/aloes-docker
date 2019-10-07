@@ -208,7 +208,7 @@ services:
       - ./config/device-manager/.env.local:/home/node/device-manager/.env:ro
       - ./config/device-manager/device-manager-local-key.pem:/home/node/device-manager/device-manager-local-key.pem:ro
       - ./config/device-manager/device-manager-local-cert.pem:/home/node/device-manager/device-manager-local-cert.pem:ro
-      # - /opt/device-manager-${NODE_ENV}-storage:/home/node/${NODE_NAME}/storage
+      - apivolume:/home/node/device-manager/storage
     links:
       - mongo
       - redis
@@ -250,7 +250,6 @@ services:
       - '${HTTP_CLIENT_PORT}:${HTTP_CLIENT_PORT}'
     expose:
       - ${HTTP_CLIENT_PORT}
-      # - ${HTTP_SERVER_PORT}
       # - ${WS_BROKER_PORT}
 
   proxy-aloes:
@@ -273,10 +272,11 @@ services:
       - ${NGINX_HTTP_SERVER_PORT}
     volumes:
       - ./config/nginx/nginx-local.template:/etc/nginx/nginx.template
-      - ./log/nginx/error.log:/etc/nginx/error_log.log
+      - ./log/nginx:/etc/nginx/log
     command: /bin/bash -c "envsubst '$${HTTP_CLIENT_PORT},$${HTTP_SERVER_PORT},$${WS_BROKER_PORT},$${NGINX_HTTP_SERVER_PORT}' < /etc/nginx/nginx.template > /etc/nginx/nginx.conf && exec nginx -g 'daemon off;'"
 
 volumes:
   mongovolume:
   redisvolume:
   influxvolume:
+  apivolume:
