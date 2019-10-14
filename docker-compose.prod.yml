@@ -3,6 +3,8 @@ version: '3.7'
 networks:
   skyring:
     driver: bridge
+  aloes:
+    driver: bridge
 
 services:
   mongo:
@@ -12,6 +14,8 @@ services:
     volumes:
       - ./config/mongo/mongo-init.sh:/docker-entrypoint-initdb.d/mongo-init.sh:ro
       - mongovolume:/data/db
+    networks:
+      - aloes
 
   influxdb:
     env_file: ./config/influxdb/.env
@@ -19,6 +23,8 @@ services:
     restart: always
     volumes:
       - influxvolume:/var/lib/influxdb
+    networks:
+      - aloes
 
   redis:
     image: redis:5-alpine
@@ -26,6 +32,8 @@ services:
     volumes:
       - redisvolume:/data
       - ./config/redis/redis.conf:/usr/local/etc/redis/redis.conf
+    networks:
+      - aloes
     command: ['redis-server', '/usr/local/etc/redis/redis.conf']
 
   timer-1:
@@ -181,7 +189,7 @@ services:
       - timer-3
       - timer-4
       - timer-5
-  
+
   certbot:
     image: certbot/certbot
     restart: always
@@ -190,43 +198,104 @@ services:
       - ./config/certbot/www:/var/www/certbot
     entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
 
-  api:
+  mqtt-api-1:
     env_file: ./config/device-manager/.env
+    environment:
+      - SERVER_LOGGER_LEVEL=3
     build:
-      context: https://framagit.org/aloes/device-manager.git#master
-      dockerfile: local.dockerfile
-    image: device-manager:stage
+      context: https://framagit.org/aloes/device-manager.git#staging
+      dockerfile: ./config/docker/broker.dockerfile
+    volumes:
+      - ./config/device-manager/.env:/home/node/device-manager/.env:ro
     restart: always
+    depends_on:
+      - redis
+    networks:
+      - aloes
+
+  mqtt-api-2:
+    env_file: ./config/device-manager/.env
+    environment:
+      - SERVER_LOGGER_LEVEL=3
+    build:
+      context: https://framagit.org/aloes/device-manager.git#staging
+      dockerfile: ./config/docker/broker.dockerfile
+    volumes:
+      - ./config/device-manager/.env:/home/node/device-manager/.env:ro
+    restart: always
+    depends_on:
+      - redis
+    networks:
+      - aloes
+
+  http-api-1:
+    env_file: ./config/device-manager/.env
+    environment:
+      - SERVER_LOGGER_LEVEL=3
+      - INSTANCES_COUNT=2
+      - INSTANCES_PREFIX=1
+    build:
+      context: https://framagit.org/aloes/device-manager.git#staging
+      dockerfile: ./config/docker/server.dockerfile
+    restart: always
+    volumes:
+      - ./config/device-manager/.env:/home/node/device-manager/.env:ro
+      - apivolume:/home/node/device-manager/storage
     depends_on:
       - mongo
       - influxdb
       - redis
       - timer-proxy
-    expose:
-      - '${HTTP_SERVER_PORT}'
-      - '${MQTT_BROKER_PORT}'
-      - '${MQTTS_BROKER_PORT}'
-      - '${WS_BROKER_PORT}'
-    ports:
-      - '${HTTP_SERVER_PORT}:${HTTP_SERVER_PORT}'
-      - '${MQTT_BROKER_PORT}:${MQTT_BROKER_PORT}'
-      - '${MQTTS_BROKER_PORT}:${MQTTS_BROKER_PORT}'
-      - '${WS_BROKER_PORT}:${WS_BROKER_PORT}'
+      - mqtt-api-1
+      - mqtt-api-2
+    networks:
+      - aloes
+
+  http-api-2:
+    env_file: ./config/device-manager/.env
+    environment:
+      - SERVER_LOGGER_LEVEL=3
+      - INSTANCES_COUNT=2
+      - INSTANCES_PREFIX=2
+    build:
+      context: https://framagit.org/aloes/device-manager.git#staging
+      dockerfile: ./config/docker/server.dockerfile
+    restart: always
     volumes:
       - ./config/device-manager/.env:/home/node/device-manager/.env:ro
-      - ./config/certbot/conf/live/${NGINX_HTTP_SERVER_HOST}/privkey.pem:/home/node/device-manager/device-manager-prod-key.pem:ro
-      - ./config/certbot/conf/live/${NGINX_HTTP_SERVER_HOST}/fullchain.pem:/home/node/device-manager/device-manager-prod-cert.pem:ro
       - apivolume:/home/node/device-manager/storage
-    links:
+    depends_on:
       - mongo
-      - redis
       - influxdb
+      - redis
       - timer-proxy
-    logging:
-      driver: 'json-file'
-      options:
-        max-size: '100MB'
-        max-file: '3'
+      - mqtt-api-1
+      - mqtt-api-2
+    networks:
+      - aloes
+
+  http-api-3:
+    env_file: ./config/device-manager/.env
+    environment:
+      - SERVER_LOGGER_LEVEL=3
+      - INSTANCES_COUNT=2
+      - INSTANCES_PREFIX=3
+    build:
+      context: https://framagit.org/aloes/device-manager.git#staging
+      dockerfile: ./config/docker/server.dockerfile
+    restart: always
+    volumes:
+      - ./config/device-manager/.env:/home/node/device-manager/.env:ro
+      - apivolume:/home/node/device-manager/storage
+    depends_on:
+      - mongo
+      - influxdb
+      - redis
+      - timer-proxy
+      - mqtt-api-1
+      - mqtt-api-2
+    networks:
+      - aloes
 
   client:
     hostname: client
@@ -240,7 +309,7 @@ services:
       - VUE_APP_LOGGER_LEVEL=${VUE_APP_LOGGER_LEVEL}
       - GIT_REPO_SSH_URL=git@framagit.org:aloes/aloes-client.git
     build:
-      context: https://framagit.org/aloes/aloes-client.git#master
+      context: https://framagit.org/aloes/aloes-client.git#staging
       dockerfile: local.dockerfile
       args:
         - VUE_APP_NAME=${VUE_APP_NAME}
@@ -253,42 +322,52 @@ services:
         - GIT_REPO_SSH_URL=git@framagit.org:aloes/aloes-client.git
     restart: always
     depends_on:
-      - api
-    ports:
-      - '${HTTP_CLIENT_PORT}:${HTTP_CLIENT_PORT}'
-    expose:
-      - ${HTTP_CLIENT_PORT}
-      - ${WS_BROKER_PORT}
+      - mqtt-api-1
+      - mqtt-api-2
+      - http-api-1
+      - http-api-2
+      - http-api-3
+    networks:
+      - aloes
 
-  proxy-aloes:
+  api-proxy:
     environment:
       - HTTP_CLIENT_PORT=${HTTP_CLIENT_PORT}
       - HTTP_SERVER_PORT=${HTTP_SERVER_PORT}
+      - MQTT_BROKER_PORT=${MQTT_BROKER_PORT}
+      - MQTTS_BROKER_PORT=${MQTTS_BROKER_PORT}
       - WS_BROKER_PORT=${WS_BROKER_PORT}
       - NGINX_HTTP_SERVER_HOST=${NGINX_HTTP_SERVER_HOST}
       - NGINX_HTTP_SERVER_PORT=${NGINX_HTTP_SERVER_PORT}
       - NGINX_HTTPS_SERVER_PORT=${NGINX_HTTPS_SERVER_PORT}
     image: 'nginx:latest'
     restart: always
-    depends_on:
-      - api
-      - client
-    links:
-      - api
-      - client
-    ports:
-      - '${NGINX_HTTP_SERVER_PORT}:${NGINX_HTTP_SERVER_PORT}'
-      - '${NGINX_HTTPS_SERVER_PORT}:${NGINX_HTTPS_SERVER_PORT}'
-    expose:
-      - ${NGINX_HTTP_SERVER_PORT}
-      - ${NGINX_HTTPS_SERVER_PORT}
     volumes:
       # - ./config/nginx/nginx-tmp.template:/etc/nginx/nginx.template
       - ./config/nginx/nginx-production.template:/etc/nginx/nginx.template
       - ./log/nginx:/etc/nginx/log
       - ./config/certbot/conf:/etc/letsencrypt
       - ./config/certbot/www:/var/www/certbot
-    command: /bin/bash -c "envsubst '$${HTTP_CLIENT_PORT},$${HTTP_SERVER_PORT},$${WS_BROKER_PORT},$${NGINX_HTTP_SERVER_PORT},$${NGINX_HTTPS_SERVER_PORT},$${NGINX_HTTP_SERVER_HOST},$${NGINX_DOMAIN},$${NGINX_EXTENSION}' < /etc/nginx/nginx.template > /etc/nginx/nginx.conf; while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g 'daemon off;'"
+    depends_on:
+      - mqtt-api-1
+      - mqtt-api-2
+      - http-api-1
+      - http-api-2
+      - http-api-3
+      - client
+    ports:
+      - '${NGINX_HTTP_SERVER_PORT}:${NGINX_HTTP_SERVER_PORT}'
+      - '${NGINX_HTTPS_SERVER_PORT}:${NGINX_HTTPS_SERVER_PORT}'
+      - '${MQTT_BROKER_PORT}:${MQTT_BROKER_PORT}'
+      - '${MQTTS_BROKER_PORT}:${MQTTS_BROKER_PORT}'
+    expose:
+      - ${NGINX_HTTP_SERVER_PORT}
+      - ${NGINX_HTTPS_SERVER_PORT}
+      - ${MQTT_BROKER_PORT}
+      - ${MQTTS_BROKER_PORT}
+    networks:
+      - aloes
+    command: /bin/bash -c "envsubst '$${HTTP_CLIENT_PORT},$${HTTP_SERVER_PORT},$${WS_BROKER_PORT},$${MQTT_BROKER_PORT},$${MQTTS_BROKER_PORT},$${NGINX_HTTP_SERVER_PORT},$${NGINX_HTTPS_SERVER_PORT},$${NGINX_HTTP_SERVER_HOST},$${NGINX_DOMAIN},$${NGINX_EXTENSION}' < /etc/nginx/nginx.template > /etc/nginx/nginx.conf; while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g 'daemon off;'"
 
 volumes:
   mongovolume:

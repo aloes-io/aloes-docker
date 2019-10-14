@@ -3,6 +3,8 @@ version: '3.7'
 networks:
   skyring:
     driver: bridge
+  aloes:
+    driver: bridge
 
 services:
   mongo:
@@ -12,6 +14,8 @@ services:
     volumes:
       - ./config/mongo/mongo-init.sh:/docker-entrypoint-initdb.d/mongo-init.sh:ro
       - mongovolume:/data/db
+    networks:
+      - aloes
 
   influxdb:
     env_file: ./config/influxdb/.env.local
@@ -19,6 +23,8 @@ services:
     restart: always
     volumes:
       - influxvolume:/var/lib/influxdb
+    networks:
+      - aloes
 
   redis:
     image: redis:5-alpine
@@ -26,6 +32,8 @@ services:
     volumes:
       - redisvolume:/data
       - ./config/redis/redis.conf:/usr/local/etc/redis/redis.conf
+    networks:
+      - aloes
     command: ['redis-server', '/usr/local/etc/redis/redis.conf']
 
   timer-1:
@@ -182,43 +190,108 @@ services:
       - timer-4
       - timer-5
 
-  api:
+  mqtt-api-1:
     env_file: ./config/device-manager/.env.local
+    environment:
+      - SERVER_LOGGER_LEVEL=3
     build:
       context: https://framagit.org/aloes/device-manager.git#staging
-      dockerfile: local.dockerfile
-    image: device-manager:stage
+      dockerfile: ./config/docker/broker.dockerfile
+    volumes:
+      - ./config/device-manager/.env.local:/home/node/device-manager/.env:ro
     restart: always
-    expose:
-      - '${HTTP_SERVER_PORT}'
-      - '${MQTT_BROKER_PORT}'
-      - '${MQTTS_BROKER_PORT}'
-      - '${WS_BROKER_PORT}'
-    ports:
-      - '${HTTP_SERVER_PORT}:${HTTP_SERVER_PORT}'
-      - '${MQTT_BROKER_PORT}:${MQTT_BROKER_PORT}'
-      - '${MQTTS_BROKER_PORT}:${MQTTS_BROKER_PORT}'
-      - '${WS_BROKER_PORT}:${WS_BROKER_PORT}'
+    depends_on:
+      - redis
+    networks:
+      - aloes
+
+  mqtt-api-2:
+    env_file: ./config/device-manager/.env.local
+    environment:
+      - SERVER_LOGGER_LEVEL=3
+    build:
+      context: https://framagit.org/aloes/device-manager.git#staging
+      dockerfile: ./config/docker/broker.dockerfile
+    volumes:
+      - ./config/device-manager/.env.local:/home/node/device-manager/.env:ro
+    restart: always
+    depends_on:
+      - redis
+      - mqtt-api-1
+    networks:
+      - aloes
+
+  http-api-1:
+    env_file: ./config/device-manager/.env.local
+    environment:
+      - SERVER_LOGGER_LEVEL=3
+      - INSTANCES_COUNT=2
+      - INSTANCES_PREFIX=1
+    build:
+      context: https://framagit.org/aloes/device-manager.git#staging
+      dockerfile: ./config/docker/server.dockerfile
+    restart: always
+    volumes:
+      - ./config/device-manager/.env.local:/home/node/device-manager/.env:ro
+      - apivolume:/home/node/device-manager/storage
     depends_on:
       - mongo
       - influxdb
       - redis
       - timer-proxy
+      - mqtt-api-1
+      - mqtt-api-2
+    networks:
+      - aloes
+
+  http-api-2:
+    env_file: ./config/device-manager/.env.local
+    environment:
+      - SERVER_LOGGER_LEVEL=3
+      - INSTANCES_COUNT=2
+      - INSTANCES_PREFIX=2
+    build:
+      context: https://framagit.org/aloes/device-manager.git#staging
+      dockerfile: ./config/docker/server.dockerfile
+    restart: always
     volumes:
       - ./config/device-manager/.env.local:/home/node/device-manager/.env:ro
-      - ./config/device-manager/device-manager-local-key.pem:/home/node/device-manager/device-manager-local-key.pem:ro
-      - ./config/device-manager/device-manager-local-cert.pem:/home/node/device-manager/device-manager-local-cert.pem:ro
       - apivolume:/home/node/device-manager/storage
-    links:
+    depends_on:
       - mongo
-      - redis
       - influxdb
+      - redis
       - timer-proxy
-    logging:
-      driver: 'json-file'
-      options:
-        max-size: '100MB'
-        max-file: '3'
+      - mqtt-api-1
+      - mqtt-api-2
+      - http-api-1
+    networks:
+      - aloes
+
+  http-api-3:
+    env_file: ./config/device-manager/.env.local
+    environment:
+      - SERVER_LOGGER_LEVEL=3
+      - INSTANCES_COUNT=2
+      - INSTANCES_PREFIX=3
+    build:
+      context: https://framagit.org/aloes/device-manager.git#staging
+      dockerfile: ./config/docker/server.dockerfile
+    restart: always
+    volumes:
+      - ./config/device-manager/.env.local:/home/node/device-manager/.env:ro
+      - apivolume:/home/node/device-manager/storage
+    depends_on:
+      - mongo
+      - influxdb
+      - redis
+      - timer-proxy
+      - mqtt-api-1
+      - mqtt-api-2
+      - http-api-1
+      - http-api-2
+    networks:
+      - aloes
 
   client:
     hostname: client
@@ -245,35 +318,43 @@ services:
         - GIT_REPO_SSH_URL=git@framagit.org:aloes/aloes-client.git
     restart: always
     depends_on:
-      - api
-    ports:
-      - '${HTTP_CLIENT_PORT}:${HTTP_CLIENT_PORT}'
-    expose:
-      - ${HTTP_CLIENT_PORT}
-      # - ${WS_BROKER_PORT}
+      - mqtt-api-1
+      - mqtt-api-2
+      - http-api-1
+      - http-api-2
+      - http-api-3
+    networks:
+      - aloes
 
-  proxy-aloes:
+  api-proxy:
     environment:
       - WS_BROKER_PORT=${WS_BROKER_PORT}
+      - MQTT_BROKER_PORT=${MQTT_BROKER_PORT}
       - HTTP_SERVER_PORT=${HTTP_SERVER_PORT}
       - HTTP_CLIENT_PORT=${HTTP_CLIENT_PORT}
       - NGINX_HTTP_SERVER_PORT=${NGINX_HTTP_SERVER_PORT}
-    image: nginx:1.16
+      - NGINX_HTTP_SERVER_HOST=${NGINX_HTTP_SERVER_HOST}
+    image: 'nginx:latest'
     restart: always
-    depends_on:
-      - api
-      - client
-    links:
-      - api
-      - client
-    ports:
-      - '${NGINX_HTTP_SERVER_PORT}:${NGINX_HTTP_SERVER_PORT}'
-    expose:
-      - ${NGINX_HTTP_SERVER_PORT}
     volumes:
       - ./config/nginx/nginx-local.template:/etc/nginx/nginx.template
       - ./log/nginx:/etc/nginx/log
-    command: /bin/bash -c "envsubst '$${HTTP_CLIENT_PORT},$${HTTP_SERVER_PORT},$${WS_BROKER_PORT},$${NGINX_HTTP_SERVER_PORT}' < /etc/nginx/nginx.template > /etc/nginx/nginx.conf && exec nginx -g 'daemon off;'"
+    depends_on:
+      - mqtt-api-1
+      - mqtt-api-2
+      - http-api-1
+      - http-api-2
+      - http-api-3
+      - client
+    ports:
+      - '${NGINX_HTTP_SERVER_PORT}:${NGINX_HTTP_SERVER_PORT}'
+      - '${MQTT_BROKER_PORT}:${MQTT_BROKER_PORT}'
+    expose:
+      - ${NGINX_HTTP_SERVER_PORT}
+      - ${MQTT_BROKER_PORT}
+    networks:
+      - aloes
+    command: /bin/bash -c "envsubst '$${HTTP_CLIENT_PORT},$${HTTP_SERVER_PORT},$${WS_BROKER_PORT},$${MQTT_BROKER_PORT},$${NGINX_HTTP_SERVER_PORT},$${NGINX_HTTP_SERVER_HOST}' < /etc/nginx/nginx.template > /etc/nginx/nginx.conf && exec nginx -g 'daemon off;'"
 
 volumes:
   mongovolume:

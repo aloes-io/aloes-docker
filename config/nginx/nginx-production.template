@@ -1,7 +1,7 @@
-worker_processes 4;
+worker_processes 8;
 
-events {
-        worker_connections 1024;
+events { 
+    worker_connections 2048; 
 }
 
 http {
@@ -16,17 +16,25 @@ http {
         '' close;
     }
 
+    map $status $loggable {
+        ~^[23]  0;
+        default 1;
+    }
+
     upstream aloes_clients {
        server client:${HTTP_CLIENT_PORT};
     }
 
     upstream aloes_http_api_servers {
-        server api:${HTTP_SERVER_PORT};
-        # server aloes-docker_api_1:8000 weight=1;
+        least_conn;
+        server http-api-1:${HTTP_SERVER_PORT};
+        server http-api-2:${HTTP_SERVER_PORT};
     }
 
     upstream aloes_ws_api_servers {
-        server api:${WS_BROKER_PORT};
+        least_conn;
+        server mqtt-api-1:${WS_BROKER_PORT};
+        server mqtt-api-2:${WS_BROKER_PORT};
     }
 
     server {
@@ -52,9 +60,9 @@ http {
     }
 
     server {
-        server_name ${NGINX_HTTP_SERVER_HOST};
         listen ${NGINX_HTTPS_SERVER_PORT} ssl;
         listen [::]:${NGINX_HTTPS_SERVER_PORT} ssl ipv6only=on;
+        server_name ${NGINX_HTTP_SERVER_HOST};
 
         # following statements will be valid after running ./config/certbot/letsencrypt-init.sh
         ssl_certificate /etc/letsencrypt/live/${NGINX_HTTP_SERVER_HOST}/fullchain.pem;
@@ -62,8 +70,8 @@ http {
         # include /etc/letsencrypt/options-ssl-nginx.conf;
         ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
 
-        # access_log /etc/nginx/log/access.${NGINX_HTTP_SERVER_HOST}.log;
-        error_log /etc/nginx/log/error.${NGINX_HTTP_SERVER_HOST}.log warn;
+        # access_log /etc/nginx/log/http-access-prod.${NGINX_HTTP_SERVER_HOST}.log;
+        error_log /etc/nginx/log/http-error-prod.${NGINX_HTTP_SERVER_HOST}.log warn;
 
         location / {
            # proxy_set_header Access-Control-Allow-Origin $cors_header;
@@ -101,4 +109,43 @@ http {
         }
     }
 
+}
+
+stream {
+    
+    log_format mqtt '$remote_addr [$time_local] $protocol $status $bytes_received ' 
+                '$bytes_sent $upstream_addr';
+
+    # access_log /etc/nginx/log/mqtt-access-prod.${NGINX_HTTP_SERVER_HOST}.log mqtt;
+    error_log /etc/nginx/log/mqtt-error-prod.${NGINX_HTTP_SERVER_HOST}.log; # Health check notifications
+
+    upstream aloes_mqtt_api_servers {
+        least_conn;
+        server mqtt-api-1:${MQTT_BROKER_PORT};
+        server mqtt-api-2:${MQTT_BROKER_PORT};
+    }
+
+    server {
+        listen ${MQTT_BROKER_PORT} so_keepalive=on;
+
+        proxy_pass aloes_mqtt_api_servers;
+        # proxy_connect_timeout 1s;
+        proxy_timeout 60s;
+    }
+
+    server {
+        listen ${MQTTS_BROKER_PORT} so_keepalive=on;
+
+        ssl_certificate /etc/letsencrypt/live/${NGINX_HTTP_SERVER_HOST}/fullchain.pem;
+        ssl_certificate_key /etc/letsencrypt/live/${NGINX_HTTP_SERVER_HOST}/privkey.pem;
+
+        ssl_ciphers         HIGH:!aNULL:!MD5;
+        ssl_session_cache   shared:SSL:128m; # 128MB ~= 500k sessions
+        ssl_session_tickets on;
+        ssl_session_timeout 8h;
+
+        proxy_pass aloes_mqtt_api_servers;
+        # proxy_connect_timeout 1s;
+        proxy_timeout 60s;
+    }
 }

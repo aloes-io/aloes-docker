@@ -40,7 +40,7 @@ echo
 
 
 echo "### Starting nginx ..."
-docker-compose -f docker-compose.prod.yml up --force-recreate --no-deps -d proxy-aloes 
+docker-compose -f docker-compose.prod.yml up --force-recreate --no-deps -d api-proxy 
 echo
 
 sleep 2
@@ -80,4 +80,4 @@ docker-compose -f docker-compose.prod.yml run --rm --entrypoint "\
 echo
 
 echo "### Reloading nginx ..."
-docker-compose -f docker-compose.prod.yml exec proxy-aloes nginx -s reload
+docker-compose -f docker-compose.prod.yml exec api-proxy nginx -s reload
