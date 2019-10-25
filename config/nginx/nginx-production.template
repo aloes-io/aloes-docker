@@ -118,7 +118,7 @@ stream {
                 '$bytes_sent $upstream_addr';
 
     # access_log /etc/nginx/log/mqtt-access-prod.${NGINX_HTTP_SERVER_HOST}.log mqtt;
-    error_log /etc/nginx/log/mqtt-error-prod.${NGINX_HTTP_SERVER_HOST}.log; # Health check notifications
+    error_log /etc/nginx/log/mqtt-error-prod.${NGINX_HTTP_SERVER_HOST}.log;
 
     upstream aloes_mqtt_api_servers {
         least_conn;
@@ -130,7 +130,7 @@ stream {
         listen ${MQTT_BROKER_PORT} so_keepalive=on;
 
         proxy_pass aloes_mqtt_api_servers;
-        # proxy_connect_timeout 1s;
+        proxy_connect_timeout 2s;
         proxy_timeout 60s;
     }
 
@@ -146,7 +146,7 @@ stream {
 
         proxy_ssl off;
         proxy_pass aloes_mqtt_api_servers;
-        # proxy_connect_timeout 1s;
+        proxy_connect_timeout 2s;
         proxy_timeout 60s;
     }
 }

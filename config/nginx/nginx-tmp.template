@@ -77,7 +77,7 @@ stream {
         listen ${MQTT_BROKER_PORT} so_keepalive=on;
 
         proxy_pass aloes_mqtt_api_servers;
-        # proxy_connect_timeout 1s;
+        proxy_connect_timeout 2s;
         proxy_timeout 60s;
 
     }
