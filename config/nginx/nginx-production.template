@@ -41,6 +41,14 @@ http {
     default "$proxy_forwarded_elem";
   }
 
+  map $sent_http_content_type $expires {
+    default                    off;
+    text/html                  epoch;
+    text/css                   max;
+    application/javascript     max;
+    ~image/                    max;
+  }
+
   upstream aloes_clients {
    server client:${HTTP_CLIENT_PORT};
   }
@@ -90,6 +98,15 @@ http {
     ssl_certificate_key /etc/letsencrypt/live/${NGINX_HTTP_SERVER_HOST}/privkey.pem;
     # include /etc/letsencrypt/options-ssl-nginx.conf;
     ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_proxied expired no-cache no-store private auth;
+    gzip_types text/plain text/css text/xml text/javascript application/x-javascript application/xml;
+    gzip_disable "MSIE [1-6]\.";
+
+    expires $expires;
 
     location / {
       proxy_pass http://aloes_clients;
@@ -156,7 +173,7 @@ stream {
 
   server {
     listen ${MQTTS_BROKER_PORT} ssl;
-    listen [::]:${MQTT_BROKER_PORT} ipv6only=on ssl;
+    listen [::]:${MQTTS_BROKER_PORT} ipv6only=on ssl;
 
     # following statements will be valid after running ./config/certbot/letsencrypt-init.sh
     ssl_certificate /etc/letsencrypt/live/${NGINX_HTTP_SERVER_HOST}/fullchain.pem;
