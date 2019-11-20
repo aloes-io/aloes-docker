@@ -1,3 +1,20 @@
+# Aloes-docker is a process manager to deploy aloes ecosystem 
+
+# Copyright 2019 Edouard Maleix
+
+# Aloes-docker is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+#  any later version.
+
+# Aloes-docker is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+
+# You should have received a copy of the GNU Affero General Public License
+# along with Aloes-docker. If not, see <https://www.gnu.org/licenses/>.
+
 version: '3.7'
 
 networks:
@@ -175,7 +192,7 @@ services:
       - skyring
 
   timer-proxy:
-    image: 'nginx:latest'
+    image: nginx:latest
     restart: always
     volumes:
       - ./config/nginx/skyring.conf:/etc/nginx/nginx.conf
@@ -340,7 +357,7 @@ services:
       - NGINX_HTTP_SERVER_HOST=${NGINX_HTTP_SERVER_HOST}
       - NGINX_HTTP_SERVER_PORT=${NGINX_HTTP_SERVER_PORT}
       - NGINX_HTTPS_SERVER_PORT=${NGINX_HTTPS_SERVER_PORT}
-    image: 'nginx:latest'
+    image: nginx:latest
     restart: always
     volumes:
       # - ./config/nginx/nginx-tmp.template:/etc/nginx/nginx.template

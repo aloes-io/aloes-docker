@@ -33,6 +33,8 @@ sudo systemctl enable docker.service
 
 - Create `.env.local` and/or `.env` in `./config/mongo/`
 
+- Create `.env.local` and/or `.env` in `./config/influxdb/`
+
 
 If you intend to run in local mode ( no domain redirection ), you just have to configure environment variables and config files.
 
@@ -47,7 +49,7 @@ chmod a+x config/certbot/letsencypt-init.sh
 
 sudo ./config/certbot/letsencrypt-init.sh
 
-docker logs --tail 50 --follow aloes-docker_proxy-aloes_1
+docker logs --tail 50 --follow aloes-docker_api-proxy_1
 ```
 
 ## Backup MongoDB
