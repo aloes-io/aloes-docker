@@ -326,7 +326,7 @@ services:
       - GIT_REPO_SSH_URL=git@framagit.org:aloes/aloes-client.git
     build:
       context: https://framagit.org/aloes/aloes-client.git#staging
-      dockerfile: local.dockerfile
+      dockerfile: Dockerfile
       args:
         - VUE_APP_NAME=${VUE_APP_NAME}
         - VUE_APP_ROOT_API=${VUE_APP_ROOT_API}
