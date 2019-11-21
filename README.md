@@ -27,7 +27,7 @@ sudo systemctl enable docker.service
 
 ## Setup
 
-- Create `.env.local` and/or `.env` at root 
+- Create `.env` at root 
 
 - Create `.env.local` and/or `.env` in `./config/device-manager/`
 
@@ -81,19 +81,23 @@ docker-compose  -f docker-compose.prod.yml --no-deps --build <service_name> up
 ```bash
 docker-compose --compatibility up 
 
+docker-compose --compatibility up -d
+
 docker-compose --compatibility -f docker-compose.prod.yml up -d
 ```
 
 ## Stop
 
 ```bash
+docker-compose --compatibility down
+
 docker-compose -f docker-compose.prod.yml down
 ```
 
 ## Monitor
 
 ```bash
-docker-compose logs --tail="100"
+docker-compose --compatibility logs --follow --tail="100"
 
 docker-compose --compatibility -f docker-compose.prod.yml logs --follow --tail="100"
 ```
