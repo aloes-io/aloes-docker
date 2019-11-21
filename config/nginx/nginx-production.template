@@ -23,12 +23,17 @@ http {
   }
 
   map $sent_http_content_type $expires {
-    default                    off;
-    text/html                  epoch;
-    text/css                   max;
-    text/javascript            max;
-    application/javascript     max;
-    ~image/                    max;
+    default                       off;
+    text/html                     epoch;
+    text/css                      max;
+    text/javascript               max;
+    application/javascript        max;
+    font/ttf                      max;
+    font/otf                      max;
+    font/woff                     max;
+    font/woff2                    max;
+    application/vnd.ms-fontobject max;
+    ~image/                       max;
   }
 
   map $remote_addr $proxy_forwarded_elem {
@@ -50,11 +55,6 @@ http {
     default "$proxy_forwarded_elem";
   }
 
-
-  # upstream aloes_clients {
-  #  server client:${HTTP_CLIENT_PORT};
-  # }
-
   upstream aloes_http_api_servers {
     least_conn;
     server http-api-1:${HTTP_SERVER_PORT};
@@ -74,15 +74,7 @@ http {
     server_name ${NGINX_HTTP_SERVER_HOST};
 
     location / {
-      return 301 https://$host/$request_uri;
-    }
-
-    location /app/ {
-      return 301 https://$host/app/$request_uri;
-    }
-
-    location /ws {
-      return 301 https://$host/ws;
+      return 301 https://$server_name$request_uri;
     }
 
     location /.well-known/acme-challenge/ {
@@ -94,6 +86,13 @@ http {
     listen ${NGINX_HTTPS_SERVER_PORT} ssl;
     listen [::]:${NGINX_HTTPS_SERVER_PORT} ssl ipv6only=on;
     server_name ${NGINX_HTTP_SERVER_HOST};
+
+    include mime.types;
+    types { 
+      application/json map; 
+    }
+    charset utf-8;
+    source_charset utf-8;
 
     # following statements will be valid after running ./config/certbot/letsencrypt-init.sh
     ssl_certificate /etc/letsencrypt/live/${NGINX_HTTP_SERVER_HOST}/fullchain.pem;
@@ -112,12 +111,7 @@ http {
     # gzip_proxied expired no-cache no-store private auth;
     gzip_disable msie6;
 
-
     location / {
-      # proxy_pass http://aloes_clients;
-      # proxy_redirect off;
-      # proxy_http_version 1.1;
-      
       root   /etc/nginx/html;
       index  index.html index.htm;
       try_files $uri $uri/ /index.html;
@@ -156,6 +150,12 @@ http {
       access_log /etc/nginx/log/ws-access-prod.${NGINX_HTTP_SERVER_HOST}.log combined buffer=32k flush=1m;
       error_log /etc/nginx/log/ws-error-prod.${NGINX_HTTP_SERVER_HOST}.log warn;
     }
+
+    error_page   500 502 503 504  /50x.html;
+    
+    location = /50x.html {
+      root   /usr/share/nginx/html;
+    }
   }
 }
 
@@ -176,6 +176,8 @@ stream {
   server {
     listen ${MQTT_BROKER_PORT};
     listen [::]:${MQTT_BROKER_PORT} ipv6only=on;
+
+    # todo : forbid and redirect
     proxy_pass aloes_mqtt_api_servers;
     proxy_connect_timeout 2s;
     proxy_timeout 60s;

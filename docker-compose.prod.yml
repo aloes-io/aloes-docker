@@ -336,9 +336,7 @@ services:
         - VUE_APP_CLIENT_URL=${VUE_APP_CLIENT_URL}
         - VUE_APP_LOGGER_LEVEL=${VUE_APP_LOGGER_LEVEL}
         - GIT_REPO_SSH_URL=git@framagit.org:aloes/aloes-client.git
-    volumes:
-      - ./.env:/home/node/aloes-client/.env:ro
-    # restart: always
+    image: aloes/aloes-client:0.5
     depends_on:
       - mqtt-api-1
       - mqtt-api-2
@@ -350,7 +348,6 @@ services:
 
   api-proxy:
     environment:
-      - HTTP_CLIENT_PORT=${HTTP_CLIENT_PORT}
       - HTTP_SERVER_PORT=${HTTP_SERVER_PORT}
       - MQTT_BROKER_PORT=${MQTT_BROKER_PORT}
       - MQTTS_BROKER_PORT=${MQTTS_BROKER_PORT}
@@ -359,8 +356,8 @@ services:
       - NGINX_HTTP_SERVER_PORT=${NGINX_HTTP_SERVER_PORT}
       - NGINX_HTTPS_SERVER_PORT=${NGINX_HTTPS_SERVER_PORT}
     build:
-      context: .
-      dockerfile: ./config/nginx/Dockerfile
+      context: ./config/nginx/
+      dockerfile: Dockerfile
     restart: always
     volumes:
       # - ./config/nginx/nginx-tmp.template:/etc/nginx/nginx.template
@@ -387,7 +384,7 @@ services:
       - ${MQTTS_BROKER_PORT}
     networks:
       - aloes
-    command: /bin/bash -c "envsubst '$${HTTP_CLIENT_PORT},$${HTTP_SERVER_PORT},$${WS_BROKER_PORT},$${MQTT_BROKER_PORT},$${MQTTS_BROKER_PORT},$${NGINX_HTTP_SERVER_PORT},$${NGINX_HTTPS_SERVER_PORT},$${NGINX_HTTP_SERVER_HOST},$${NGINX_DOMAIN},$${NGINX_EXTENSION}' < /etc/nginx/nginx.template > /etc/nginx/nginx.conf; while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g 'daemon off;'"
+    command: /bin/bash -c "envsubst '$${HTTP_SERVER_PORT},$${WS_BROKER_PORT},$${MQTT_BROKER_PORT},$${MQTTS_BROKER_PORT},$${NGINX_HTTP_SERVER_PORT},$${NGINX_HTTPS_SERVER_PORT},$${NGINX_HTTP_SERVER_HOST},$${NGINX_DOMAIN},$${NGINX_EXTENSION}' < /etc/nginx/nginx.template > /etc/nginx/nginx.conf; while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g 'daemon off;'"
 
 volumes:
   mongovolume:

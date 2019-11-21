@@ -19,12 +19,17 @@ http {
   }
 
   map $sent_http_content_type $expires {
-    default                    off;
-    text/html                  epoch;
-    text/css                   max;
-    text/javascript            max;
-    application/javascript     max;
-    ~image/                    max;
+    default                       off;
+    text/html                     epoch;
+    text/css                      max;
+    text/javascript               max;
+    application/javascript        max;
+    font/ttf                      max;
+    font/otf                      max;
+    font/woff                     max;
+    font/woff2                    max;
+    application/vnd.ms-fontobject max;
+    ~image/                       max;
   }
 
   map $remote_addr $proxy_forwarded_elem {
@@ -46,10 +51,6 @@ http {
     default "$proxy_forwarded_elem";
 	}
 
-  # upstream aloes_clients {
-  #   server client:${HTTP_CLIENT_PORT};
-  # }
-
   upstream aloes_http_api_servers {
     least_conn;
     server http-api-1:${HTTP_SERVER_PORT} max_fails=3 fail_timeout=15s;
@@ -69,10 +70,11 @@ http {
     server_name ${NGINX_HTTP_SERVER_HOST};
 
     include  mime.types;
-
     types { 
       application/json map; 
     }
+    charset utf-8;
+    source_charset utf-8;
 
     gzip on;
     gzip_buffers 16 8k;
@@ -86,13 +88,6 @@ http {
     gzip_disable msie6;
 
     location / {
-    #  proxy_pass http://aloes_clients;
-    #  proxy_redirect off;
-    #  proxy_set_header Host $http_host;
-    #  proxy_set_header X-Real-IP $remote_addr;
-    #  proxy_set_header X-Scheme $scheme;
-    #  proxy_http_version 1.1;
-
       root   /etc/nginx/html;
       index  index.html index.htm;
       try_files $uri $uri/ /index.html;

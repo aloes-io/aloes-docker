@@ -63,6 +63,20 @@ docker logs --tail 50 --follow aloes-docker_api-proxy_1
 ```bash
 ./config/mongo/./mongorestore.sh -d aloes_test -db aloes_test -c aloes-docker_mongo_1 -u aloes -p example
 ```
+## Display config
+
+```bash
+docker-compose config
+
+docker-compose -f docker-compose.prod.yml config
+```
+or using shortcut :
+
+```bash
+./test-conf.sh
+
+./test-conf.sh -e production
+```
 
 ## Build
 
@@ -75,6 +89,15 @@ docker-compose  -f docker-compose.prod.yml build <service_name>
 
 docker-compose  -f docker-compose.prod.yml --no-deps --build <service_name> up
 ```
+or using shortcut :
+
+```bash
+./build.sh
+
+./build.sh -e production
+
+./build.sh -e local -s <service_name>
+```
 
 ## Start
 
@@ -85,6 +108,16 @@ docker-compose --compatibility up -d
 
 docker-compose --compatibility -f docker-compose.prod.yml up -d
 ```
+or using shortcut :
+
+```bash
+./start.sh
+
+./start.sh -e production
+
+./start.sh -e local -s <service_name>
+```
+
 
 ## Stop
 
@@ -93,6 +126,16 @@ docker-compose --compatibility down
 
 docker-compose -f docker-compose.prod.yml down
 ```
+or using shortcut :
+
+```bash
+./stop.sh
+
+./stop.sh -e production
+
+./stop.sh -e local -s <service_name>
+```
+
 
 ## Monitor
 
@@ -100,4 +143,13 @@ docker-compose -f docker-compose.prod.yml down
 docker-compose --compatibility logs --follow --tail="100"
 
 docker-compose --compatibility -f docker-compose.prod.yml logs --follow --tail="100"
+```
+or using shortcut :
+
+```bash
+./log.sh
+
+./log.sh -e production
+
+./log.sh -e local -s <service_name>
 ```

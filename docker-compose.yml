@@ -333,9 +333,6 @@ services:
         - VUE_APP_LOGGER_LEVEL=${VUE_APP_LOGGER_LEVEL}
         - GIT_REPO_SSH_URL=git@framagit.org:aloes/aloes-client.git
     image: aloes/aloes-client:0.5
-    # restart: always
-    volumes:
-      - ./.env:/home/node/aloes-client/.env:ro
     depends_on:
       - mqtt-api-1
       - mqtt-api-2
@@ -350,12 +347,11 @@ services:
       - WS_BROKER_PORT=${WS_BROKER_PORT}
       - MQTT_BROKER_PORT=${MQTT_BROKER_PORT}
       - HTTP_SERVER_PORT=${HTTP_SERVER_PORT}
-      - HTTP_CLIENT_PORT=${HTTP_CLIENT_PORT}
       - NGINX_HTTP_SERVER_PORT=${NGINX_HTTP_SERVER_PORT}
       - NGINX_HTTP_SERVER_HOST=${NGINX_HTTP_SERVER_HOST}
     build:
-      context: .
-      dockerfile: ./config/nginx/Dockerfile
+      context: ./config/nginx/
+      dockerfile: Dockerfile
     restart: always
     volumes:
       - ./config/nginx/nginx-local.template:/etc/nginx/nginx.template
@@ -375,7 +371,7 @@ services:
       - ${MQTT_BROKER_PORT}
     networks:
       - aloes
-    command: /bin/bash -c "envsubst '$${HTTP_CLIENT_PORT},$${HTTP_SERVER_PORT},$${WS_BROKER_PORT},$${MQTT_BROKER_PORT},$${NGINX_HTTP_SERVER_PORT},$${NGINX_HTTP_SERVER_HOST}' < /etc/nginx/nginx.template > /etc/nginx/nginx.conf && exec nginx -g 'daemon off;'"
+    command: /bin/bash -c "envsubst '$${HTTP_SERVER_PORT},$${WS_BROKER_PORT},$${MQTT_BROKER_PORT},$${NGINX_HTTP_SERVER_PORT},$${NGINX_HTTP_SERVER_HOST}' < /etc/nginx/nginx.template > /etc/nginx/nginx.conf && exec nginx -g 'daemon off;'"
 
 volumes:
   mongovolume:
