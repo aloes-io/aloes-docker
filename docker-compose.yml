@@ -311,7 +311,15 @@ services:
       - aloes
 
   client:
-    env_file: .env
+    environment:
+      - VUE_APP_NAME=${VUE_APP_NAME}
+      - VUE_APP_ROOT_API=${VUE_APP_ROOT_API}
+      - VUE_APP_DOMAIN=${VUE_APP_DOMAIN}
+      - VUE_APP_SERVER_URL=${VUE_APP_SERVER_URL}
+      - VUE_APP_BROKER_URL=${VUE_APP_BROKER_URL}
+      - VUE_APP_CLIENT_URL=${VUE_APP_CLIENT_URL}
+      - VUE_APP_LOGGER_LEVEL=${VUE_APP_LOGGER_LEVEL}
+      - GIT_REPO_SSH_URL=git@framagit.org:aloes/aloes-client.git
     build:
       context: https://framagit.org/aloes/aloes-client.git#staging
       dockerfile: Dockerfile
@@ -351,7 +359,6 @@ services:
     restart: always
     volumes:
       - ./config/nginx/nginx-local.template:/etc/nginx/nginx.template
-      - ./config/aloes-client/dist:/usr/share/nginx/html
       - ./log/nginx:/etc/nginx/log
     depends_on:
       - mqtt-api-1
