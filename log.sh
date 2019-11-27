@@ -35,6 +35,9 @@ fi
 echo "Log ${ENV} containers"
 docker-compose --compatibility -f ${FILENAME} logs --follow --tail="100"
 
+# docker logs aloes-gw --follow --tail="100"
+# docker logs aloes-gw-prod --follow --tail="100"
+
 if [ $? -ne 0 ]; then
     echo "Docker-compose did not display logs"
 fi

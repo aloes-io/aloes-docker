@@ -288,6 +288,9 @@ services:
   http-api-3:
     env_file: ./config/device-manager/.env.local
     environment:
+      - WS_BROKER_PORT=${WS_BROKER_PORT}
+      - MQTT_BROKER_PORT=${MQTT_BROKER_PORT}
+      - HTTP_SERVER_PORT=${HTTP_SERVER_PORT}
       - SERVER_LOGGER_LEVEL=3
       - INSTANCES_COUNT=2
       - INSTANCES_PREFIX=3
@@ -342,13 +345,14 @@ services:
     networks:
       - aloes
 
-  api-proxy:
+  aloes-lb-1:
     environment:
       - WS_BROKER_PORT=${WS_BROKER_PORT}
       - MQTT_BROKER_PORT=${MQTT_BROKER_PORT}
       - HTTP_SERVER_PORT=${HTTP_SERVER_PORT}
-      - NGINX_HTTP_SERVER_PORT=${NGINX_HTTP_SERVER_PORT}
-      - NGINX_HTTP_SERVER_HOST=${NGINX_HTTP_SERVER_HOST}
+      - LB_HTTP_SERVER_PORT=${LB_HTTP_SERVER_PORT}
+      - LB_TCP_SERVER_PORT=${LB_TCP_SERVER_PORT}
+      - LB_SERVER_HOST=${LB_SERVER_HOST}
     build:
       context: ./config/nginx/
       dockerfile: Dockerfile
@@ -364,14 +368,11 @@ services:
       - http-api-3
       - client
     ports:
-      - '${NGINX_HTTP_SERVER_PORT}:${NGINX_HTTP_SERVER_PORT}'
-      - '${MQTT_BROKER_PORT}:${MQTT_BROKER_PORT}'
-    expose:
-      - ${NGINX_HTTP_SERVER_PORT}
-      - ${MQTT_BROKER_PORT}
+      - '${LB_HTTP_SERVER_PORT}:${LB_HTTP_SERVER_PORT}'
+      - '${LB_TCP_SERVER_PORT}:${LB_TCP_SERVER_PORT}'
     networks:
       - aloes
-    command: /bin/bash -c "envsubst '$${HTTP_SERVER_PORT},$${WS_BROKER_PORT},$${MQTT_BROKER_PORT},$${NGINX_HTTP_SERVER_PORT},$${NGINX_HTTP_SERVER_HOST}' < /etc/nginx/nginx.template > /etc/nginx/nginx.conf && exec nginx -g 'daemon off;'"
+    command: /bin/bash -c "envsubst '$${HTTP_SERVER_PORT},$${WS_BROKER_PORT},$${MQTT_BROKER_PORT},$${LB_TCP_SERVER_PORT},$${LB_HTTP_SERVER_PORT},$${LB_SERVER_HOST}' < /etc/nginx/nginx.template > /etc/nginx/nginx.conf && exec nginx -g 'daemon off;'"
 
 volumes:
   mongovolume:

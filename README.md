@@ -24,6 +24,12 @@ sudo usermod -aG docker <non-root user>
 ```bash
 sudo systemctl enable docker.service
 ```
+## Solve "real" ip issues
+
+Many developers using nginx inside docker uncountered this [issue](https://github.com/jwilder/nginx-proxy/issues/133)
+
+Update hosts file to point your servername to the loopback network ?
+
 
 ## Setup
 

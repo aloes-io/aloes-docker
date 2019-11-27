@@ -346,25 +346,27 @@ services:
     networks:
       - aloes
 
-  api-proxy:
+  app-lb-1:
     environment:
       - HTTP_SERVER_PORT=${HTTP_SERVER_PORT}
       - MQTT_BROKER_PORT=${MQTT_BROKER_PORT}
-      - MQTTS_BROKER_PORT=${MQTTS_BROKER_PORT}
+      # - MQTTS_BROKER_PORT=${MQTTS_BROKER_PORT}
       - WS_BROKER_PORT=${WS_BROKER_PORT}
-      - NGINX_HTTP_SERVER_HOST=${NGINX_HTTP_SERVER_HOST}
-      - NGINX_HTTP_SERVER_PORT=${NGINX_HTTP_SERVER_PORT}
-      - NGINX_HTTPS_SERVER_PORT=${NGINX_HTTPS_SERVER_PORT}
+      - LB_SERVER_HOST=${LB_SERVER_HOST}
+      - LB_TCP_SERVER_PORT=${LB_TCP_SERVER_PORT}
+      - LB_HTTP_SERVER_PORT=${LB_HTTP_SERVER_PORT}
+      # - NGINX_HTTPS_SERVER_PORT=${NGINX_HTTPS_SERVER_PORT}
     build:
       context: ./config/nginx/
       dockerfile: Dockerfile
     restart: always
     volumes:
       # - ./config/nginx/nginx-tmp.template:/etc/nginx/nginx.template
-      - ./config/nginx/nginx-production.template:/etc/nginx/nginx.template
+      # - ./config/nginx/nginx-production.template:/etc/nginx/nginx.template
+      - ./config/nginx/nginx-local.template:/etc/nginx/nginx.template
       - ./log/nginx:/etc/nginx/log
-      - ./config/certbot/conf:/etc/letsencrypt
-      - ./config/certbot/www:/var/www/certbot
+      # - ./config/certbot/conf:/etc/letsencrypt
+      # - ./config/certbot/www:/var/www/certbot
     depends_on:
       - mqtt-api-1
       - mqtt-api-2
@@ -373,18 +375,14 @@ services:
       - http-api-3
       - client
     ports:
-      - '${NGINX_HTTP_SERVER_PORT}:${NGINX_HTTP_SERVER_PORT}'
-      - '${NGINX_HTTPS_SERVER_PORT}:${NGINX_HTTPS_SERVER_PORT}'
-      - '${MQTT_BROKER_PORT}:${MQTT_BROKER_PORT}'
-      - '${MQTTS_BROKER_PORT}:${MQTTS_BROKER_PORT}'
-    expose:
-      - ${NGINX_HTTP_SERVER_PORT}
-      - ${NGINX_HTTPS_SERVER_PORT}
-      - ${MQTT_BROKER_PORT}
-      - ${MQTTS_BROKER_PORT}
+      - '${LB_HTTP_SERVER_PORT}:${LB_HTTP_SERVER_PORT}'
+      - '${LB_TCP_SERVER_PORT}:${LB_TCP_SERVER_PORT}'
+      # - '${NGINX_HTTPS_SERVER_PORT}:${NGINX_HTTPS_SERVER_PORT}'
+      # - '${NGINX_TCPS_SERVER_PORT}:${NGINX_TCPS_SERVER_PORT}'
     networks:
       - aloes
-    command: /bin/bash -c "envsubst '$${HTTP_SERVER_PORT},$${WS_BROKER_PORT},$${MQTT_BROKER_PORT},$${MQTTS_BROKER_PORT},$${NGINX_HTTP_SERVER_PORT},$${NGINX_HTTPS_SERVER_PORT},$${NGINX_HTTP_SERVER_HOST},$${NGINX_DOMAIN},$${NGINX_EXTENSION}' < /etc/nginx/nginx.template > /etc/nginx/nginx.conf; while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g 'daemon off;'"
+    # command: /bin/bash -c "envsubst '$${HTTP_SERVER_PORT},$${WS_BROKER_PORT},$${MQTT_BROKER_PORT},$${MQTTS_BROKER_PORT},$${LB_HTTP_SERVER_PORT},$${NGINX_HTTPS_SERVER_PORT},$${LB_SERVER_HOST},$${NGINX_DOMAIN},$${NGINX_EXTENSION}' < /etc/nginx/nginx.template > /etc/nginx/nginx.conf; while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g 'daemon off;'"
+    command: /bin/bash -c "envsubst '$${HTTP_SERVER_PORT},$${WS_BROKER_PORT},$${MQTT_BROKER_PORT},$${LB_TCP_SERVER_PORT},$${LB_HTTP_SERVER_PORT},$${LB_SERVER_HOST}' < /etc/nginx/nginx.template > /etc/nginx/nginx.conf && exec nginx -g 'daemon off;'"
 
 volumes:
   mongovolume:

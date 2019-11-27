@@ -40,7 +40,8 @@ echo
 
 
 echo "### Starting nginx ..."
-docker-compose -f docker-compose.prod.yml up --force-recreate --no-deps -d api-proxy 
+# docker-compose -f docker-compose.prod.yml up --force-recreate --no-deps -d api-proxy 
+docker run --rm -it --name aloes-gw -v "$data_path/www:/var/www/certbot" --net="host" aloes-gw
 echo
 
 sleep 2
@@ -80,4 +81,5 @@ docker-compose -f docker-compose.prod.yml run --rm --entrypoint "\
 echo
 
 echo "### Reloading nginx ..."
-docker-compose -f docker-compose.prod.yml exec api-proxy nginx -s reload
+docker exec -d aloes-gw nginx -s reload
+# docker-compose -f docker-compose.prod.yml exec api-proxy nginx -s reload

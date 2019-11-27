@@ -71,7 +71,7 @@ http {
   server {
     listen ${NGINX_HTTP_SERVER_PORT};
     listen [::]:${NGINX_HTTP_SERVER_PORT} ipv6only=on;
-    server_name ${NGINX_HTTP_SERVER_HOST};
+    server_name ${NGINX_SERVER_HOST};
 
     location / {
       return 301 https://$server_name$request_uri;
@@ -85,7 +85,7 @@ http {
   server {
     listen ${NGINX_HTTPS_SERVER_PORT} ssl;
     listen [::]:${NGINX_HTTPS_SERVER_PORT} ssl ipv6only=on;
-    server_name ${NGINX_HTTP_SERVER_HOST};
+    server_name ${NGINX_SERVER_HOST};
 
     include mime.types;
     types { 
@@ -95,8 +95,8 @@ http {
     source_charset utf-8;
 
     # following statements will be valid after running ./config/certbot/letsencrypt-init.sh
-    ssl_certificate /etc/letsencrypt/live/${NGINX_HTTP_SERVER_HOST}/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/${NGINX_HTTP_SERVER_HOST}/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/${NGINX_SERVER_HOST}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${NGINX_SERVER_HOST}/privkey.pem;
     # include /etc/letsencrypt/options-ssl-nginx.conf;
     ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
 
@@ -127,11 +127,12 @@ http {
       proxy_set_header X-Real-IP $remote_addr;
       proxy_set_header X-Real-Port $remote_port;
       proxy_set_header X-Scheme $scheme;
+      proxy_set_header X-Forwarded-Proto $scheme;
       proxy_set_header Forwarded $proxy_add_forwarded;
       proxy_set_header X-Forwarded-For "";
       proxy_http_version 1.1;
-      access_log /etc/nginx/log/http-access-prod.${NGINX_HTTP_SERVER_HOST}.log combined buffer=32k flush=1m;
-      error_log /etc/nginx/log/http-error-prod.${NGINX_HTTP_SERVER_HOST}.log warn;
+      access_log /etc/nginx/log/http-access-prod.${NGINX_SERVER_HOST}.log combined buffer=32k flush=1m;
+      error_log /etc/nginx/log/http-error-prod.${NGINX_SERVER_HOST}.log warn;
     }
 
     location /ws {
@@ -142,13 +143,14 @@ http {
       proxy_set_header X-Real-IP $remote_addr;
       proxy_set_header X-Real-Port $remote_port;
       proxy_set_header X-Scheme $scheme;
+      proxy_set_header X-Forwarded-Proto $scheme;
       proxy_set_header Forwarded $proxy_add_forwarded;
       proxy_set_header X-Forwarded-For "";
       proxy_http_version 1.1;
       proxy_set_header Upgrade $http_upgrade;
       proxy_set_header Connection $connection_upgrade;
-      access_log /etc/nginx/log/ws-access-prod.${NGINX_HTTP_SERVER_HOST}.log combined buffer=32k flush=1m;
-      error_log /etc/nginx/log/ws-error-prod.${NGINX_HTTP_SERVER_HOST}.log warn;
+      access_log /etc/nginx/log/ws-access-prod.${NGINX_SERVER_HOST}.log combined buffer=32k flush=1m;
+      error_log /etc/nginx/log/ws-error-prod.${NGINX_SERVER_HOST}.log warn;
     }
 
     error_page   500 502 503 504  /50x.html;
@@ -164,8 +166,8 @@ stream {
   log_format mqtt '$remote_addr [$time_local] $protocol $status $bytes_received ' 
                   '$bytes_sent $upstream_addr';
 
-  access_log /etc/nginx/log/mqtt-access-prod.${NGINX_HTTP_SERVER_HOST}.log mqtt buffer=32k flush=1m;
-  error_log /etc/nginx/log/mqtt-error-prod.${NGINX_HTTP_SERVER_HOST}.log;
+  access_log /etc/nginx/log/mqtt-access-prod.${NGINX_SERVER_HOST}.log mqtt buffer=32k flush=1m;
+  error_log /etc/nginx/log/mqtt-error-prod.${NGINX_SERVER_HOST}.log;
 
   upstream aloes_mqtt_api_servers {
     least_conn;
@@ -178,6 +180,7 @@ stream {
     listen [::]:${MQTT_BROKER_PORT} ipv6only=on;
 
     # todo : forbid and redirect
+    # return 301 $server_addr:${MQTTS_BROKER_PORT}; or proxy_pass server $server_addr:${MQTTS_BROKER_PORT};?
     proxy_pass aloes_mqtt_api_servers;
     proxy_connect_timeout 2s;
     proxy_timeout 60s;
@@ -188,8 +191,8 @@ stream {
     listen [::]:${MQTTS_BROKER_PORT} ipv6only=on ssl;
 
     # following statements will be valid after running ./config/certbot/letsencrypt-init.sh
-    ssl_certificate /etc/letsencrypt/live/${NGINX_HTTP_SERVER_HOST}/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/${NGINX_HTTP_SERVER_HOST}/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/${NGINX_SERVER_HOST}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${NGINX_SERVER_HOST}/privkey.pem;
     ssl_ciphers         HIGH:!aNULL:!MD5;
     ssl_session_cache   shared:SSL:128m; # 128MB ~= 500k sessions
     ssl_session_tickets on;

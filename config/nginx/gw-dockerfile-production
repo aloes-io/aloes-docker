@@ -1,0 +1,34 @@
+FROM nginx:latest
+
+ARG HTTP_SERVER_PORT=8000
+ARG TCP_SERVER_PORT=1884
+ARG PROXY_SERVER_HOST=localhost
+ARG PROXY_HTTP_SERVER_PORT=80
+ARG PROXY_HTTPS_SERVER_PORT=443
+ARG PROXY_MQTT_BROKER_PORT=1883
+ARG PROXY_MQTTS_BROKER_PORT=8883
+
+ENV HTTP_SERVER_PORT=${HTTP_SERVER_PORT}
+ENV TCP_SERVER_PORT=${TCP_SERVER_PORT}
+ENV PROXY_SERVER_HOST=${PROXY_SERVER_HOST}
+ENV PROXY_HTTP_SERVER_PORT=${PROXY_HTTP_SERVER_PORT}
+ENV PROXY_HTTPS_SERVER_PORT=${PROXY_HTTPS_SERVER_PORT}
+ENV PROXY_MQTT_BROKER_PORT=${PROXY_MQTT_BROKER_PORT}
+ENV PROXY_MQTTS_BROKER_PORT=${PROXY_MQTTS_BROKER_PORT}
+
+COPY ./nginx-gw-production.template /etc/nginx/nginx.template
+RUN rm /etc/nginx/conf.d/default.conf
+
+RUN mkdir -p /var/www/certbot
+RUN mkdir /etc/letsencrypt
+
+RUN ln -sf /dev/stdout /var/log/nginx/http-gw-access.log && ln -sf /dev/stderr /var/log/nginx/http-gw-error.log
+RUN ln -sf /dev/stdout /var/log/nginx/mqtt-gw-access.log && ln -sf /dev/stderr /var/log/nginx/mqtt-gw-error.log
+
+EXPOSE ${PROXY_HTTP_SERVER_PORT}
+EXPOSE ${PROXY_MQTT_BROKER_PORT}
+EXPOSE ${PROXY_HTTPS_SERVER_PORT}
+EXPOSE ${PROXY_MQTTS_BROKER_PORT}
+
+# ENTRYPOINT or CMD ?
+CMD envsubst '$${HTTP_SERVER_PORT},$${TCP_SERVER_PORT},$${PROXY_MQTT_BROKER_PORT},$${PROXY_MQTTS_BROKER_PORT},$${PROXY_HTTP_SERVER_PORT},$${PROXY_HTTPS_SERVER_PORT},$${PROXY_SERVER_HOST}' < /etc/nginx/nginx.template > /etc/nginx/nginx.conf ; while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g 'daemon off;'"

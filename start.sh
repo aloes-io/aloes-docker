@@ -24,16 +24,21 @@ done
 if [ "${ENV}" == "production" ]
 then
     FILENAME="docker-compose.prod.yml"
+    docker run --rm -itd --name aloes-gw-prod -v "$(pwd)"/config/certbot/www:/var/www/certbot -v "$(pwd)"/config/certbot/conf:/etc/letsencrypt --net="host" aloes-gw-prod
 elif [ "${ENV}" == "local" ]
 then
     FILENAME="docker-compose.yml"
+    docker run --rm -itd --name aloes-gw -v "$(pwd)"/config/certbot/www:/var/www/certbot --net="host" aloes-gw
 else
     ENV="local"
     FILENAME="docker-compose.yml"
+    docker run --rm -itd --name aloes-gw -v "$(pwd)"/config/certbot/www:/var/www/certbot --net="host" aloes-gw
 fi
 
 echo "Start ${ENV} containers"
+
 docker-compose --compatibility -f ${FILENAME} up -d 
+
 # docker-compose --compatibility -f ${FILENAME} up -d ${SERVICE}
 
 if [ $? -ne 0 ]; then
