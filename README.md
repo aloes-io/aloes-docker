@@ -98,11 +98,11 @@ docker-compose  -f docker-compose.prod.yml --no-deps --build <service_name> up
 or using shortcut :
 
 ```bash
-./build.sh
+./aloes.sh --command build
 
-./build.sh -e production
+./aloes.sh -c build --env production
 
-./build.sh -e local -s <service_name>
+./aloes.sh -c build -e local --service <service_name>
 ```
 
 ## Start
@@ -117,11 +117,11 @@ docker-compose --compatibility -f docker-compose.prod.yml up -d
 or using shortcut :
 
 ```bash
-./start.sh
+./aloes.sh -c start
 
-./start.sh -e production
+./aloes.sh -c start -e production
 
-./start.sh -e local -s <service_name>
+./aloes.sh -c start -e local -s <service_name>
 ```
 
 
@@ -135,11 +135,11 @@ docker-compose -f docker-compose.prod.yml down
 or using shortcut :
 
 ```bash
-./stop.sh
+./aloes.sh -c stop
 
-./stop.sh -e production
+./aloes.sh -c stop -e production
 
-./stop.sh -e local -s <service_name>
+./aloes.sh -c stop -e local -s <service_name>
 ```
 
 
@@ -153,9 +153,20 @@ docker-compose --compatibility -f docker-compose.prod.yml logs --follow --tail="
 or using shortcut :
 
 ```bash
-./log.sh
+./aloes.sh -c log
 
-./log.sh -e production
+./aloes.sh -c log -e production
 
-./log.sh -e local -s <service_name>
+./aloes.sh -c log -e local -s proxy
 ```
+
+## TODO
+
+- Replicate Mongo and Redis servers
+
+- Use docker swarm to deploy on several machines
+
+- Use aloes.sh to create .env file via interactive session
+
+- Use aloes.sh to configure dynamically docker-compose file ?
+

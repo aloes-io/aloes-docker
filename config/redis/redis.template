@@ -1,4 +1,4 @@
-port 6379
+port ${REDIS_PORT}
 
 # tcp-backlog 511
 
@@ -44,6 +44,6 @@ rdbchecksum yes
 
 # bind 127.0.0.1 
 
-requirepass example
+requirepass ${REDIS_PASS}
 
 
