@@ -46,9 +46,10 @@ build_proxy () {
 
   if [ "$1" == "production" ]; then
     docker build --no-cache -t aloes-gw-prod -f $dockerfile $build_context --build-arg http_server_port=$http_server_port \
-      --build-arg tcp_server_port=$tcp_server_port --build-arg proxy_server_host=$proxy_server_host --build-arg proxy_http_server_port=$proxy_http_server_port \
-      --build-arg proxy_mqtt_broker_port=$proxy_mqtt_broker_port --build-arg proxy_https_server_port=$proxy_https_server_port \
-      --build-arg proxy_mqtts_broker_port=$proxy_mqtts_broker_port --build-arg nginx_template=$nginx_template
+      --build-arg tcp_server_port=$tcp_server_port --build-arg timer_server_port=$timer_server_port --build-arg proxy_server_host=$proxy_server_host \
+      --build-arg proxy_http_server_port=$proxy_http_server_port --build-arg proxy_mqtt_broker_port=$proxy_mqtt_broker_port \
+      --build-arg proxy_https_server_port=$proxy_https_server_port --build-arg proxy_mqtts_broker_port=$proxy_mqtts_broker_port \
+      --build-arg nginx_template=$nginx_template
   else
     docker build --no-cache -t aloes-gw -f $dockerfile $build_context --build-arg http_server_port=$http_server_port \
       --build-arg tcp_server_port=$tcp_server_port --build-arg timer_server_port=$timer_server_port --build-arg proxy_server_host=$proxy_server_host \

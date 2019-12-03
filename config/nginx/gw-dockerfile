@@ -23,6 +23,7 @@ ENV NGINX_TEMPLATE=${nginx_template}
 RUN echo "HTTP_SERVER $HTTP_SERVER_PORT"
 RUN echo "TCP_SERVER_PORT $TCP_SERVER_PORT"
 RUN echo "PROXY_SERVER_HOST $PROXY_SERVER_HOST"
+RUN echo "NGINX_TEMPLATE $NGINX_TEMPLATE"
 
 RUN rm /etc/nginx/conf.d/default.conf
 COPY ${NGINX_TEMPLATE} /etc/nginx/nginx.template

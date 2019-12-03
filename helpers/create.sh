@@ -54,7 +54,7 @@ create_device_manager_env() {
   local ENV=$2
   local HTTP_SERVER_URL
   local HTTP_CLIENT_URL
-  if [ $ENV == "production" ]; then
+  if [ "$ENV" == "production" ]; then
     HTTP_SERVER_URL=$(read_var PROXY_HTTPS_SERVER_URL $config)
     HTTP_CLIENT_URL=$(read_var PROXY_HTTPS_CLIENT_URL $config)
   else
@@ -155,14 +155,14 @@ replicate_env() {
   local ENV=$3
   local HTTP_SERVER_URL
   local HTTP_CLIENT_URL
-  if [ $ENV == "production" ]; then
-    HTTP_SERVER_URL=$(read_var PROXY_HTTPS_SERVER_URL $config)
-    WS_BROKER_URL=$(read_var PROXY_WSS_BROKER_URL $config)
-    HTTP_CLIENT_URL=$(read_var PROXY_HTTPS_CLIENT_URL $config)
+  if [ "$ENV" == "production" ]; then
+    HTTP_SERVER_URL=$(read_var PROXY_HTTPS_SERVER_URL $from)
+    WS_BROKER_URL=$(read_var PROXY_WSS_BROKER_URL $from)
+    HTTP_CLIENT_URL=$(read_var PROXY_HTTPS_CLIENT_URL $from)
   else
-    HTTP_SERVER_URL=$(read_var PROXY_HTTP_SERVER_URL $config)
-    WS_BROKER_URL=$(read_var PROXY_WS_BROKER_URL $config)
-    HTTP_CLIENT_URL=$(read_var PROXY_HTTP_CLIENT_URL $config)
+    HTTP_SERVER_URL=$(read_var PROXY_HTTP_SERVER_URL $from)
+    WS_BROKER_URL=$(read_var PROXY_WS_BROKER_URL $from)
+    HTTP_CLIENT_URL=$(read_var PROXY_HTTP_CLIENT_URL $from)
   fi
 
   echo "# ALOES API CONFIG
@@ -183,9 +183,9 @@ MQTT_SECURE=$(read_var MQTT_SECURE $from)
 MQTT_TRUST_PROXY=$(read_var MQTT_TRUST_PROXY $from)
 SERVER_LOGGER_LEVEL=$(read_var SERVER_LOGGER_LEVEL $from)
 # VUE APP CONFIG
-VUE_APP_SERVER_URL=$(read_var HTTP_SERVER_URL $from)
-VUE_APP_BROKER_URL=$(read_var WS_BROKER_URL $from)
-VUE_APP_CLIENT_URL=$(read_var HTTP_CLIENT_URL $from)
+VUE_APP_SERVER_URL=$HTTP_SERVER_URL 
+VUE_APP_BROKER_URL=$WS_BROKER_URL
+VUE_APP_CLIENT_URL=$HTTP_CLIENT_URL 
 # SMTP CONFIG
 SMTP_HOST=$(read_var SMTP_HOST $from)
 SMTP_PORT=$(read_var SMTP_PORT $from)
@@ -440,12 +440,11 @@ create_env() {
     done
   fi
 
+  replicate_env $config_tmp $config $ENV
   echo "Configuration saved in $config"
-
-  replicate_env $config_tmp $config
   rm $config_tmp
   
-  create_device_manager_env $config
+  create_device_manager_env $config $ENV
   echo "Configuration replicated in device-manager"
 
 }
