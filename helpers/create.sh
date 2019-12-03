@@ -49,8 +49,19 @@ create_device_manager_env() {
     echo "Config file name is required"
     exit 1
   fi
-
   local config=$1
+  
+  local ENV=$2
+  local HTTP_SERVER_URL
+  local HTTP_CLIENT_URL
+  if [ $ENV == "production" ]; then
+    HTTP_SERVER_URL=$(read_var PROXY_HTTPS_SERVER_URL $config)
+    HTTP_CLIENT_URL=$(read_var PROXY_HTTPS_CLIENT_URL $config)
+  else
+    HTTP_SERVER_URL=$(read_var PROXY_HTTP_SERVER_URL $config)
+    HTTP_CLIENT_URL=$(read_var PROXY_HTTP_CLIENT_URL $config)
+  fi
+
   local aloes_config="$(pwd)/config/device-manager/.env"
   if [ -f "$aloes_config" ]; then
     rm $aloes_config
@@ -63,8 +74,8 @@ ALOES_KEY=$(read_var ALOES_KEY $config)
 ADMIN_EMAIL=$(read_var ADMIN_EMAIL $config)
 CONTACT_EMAIL=hey@aloes.io
 DOMAIN=$(read_var PROXY_DOMAIN $config)
-HTTP_SERVER_URL=$(read_var PROXY_HTTP_SERVER_URL $config)
-HTTP_CLIENT_URL=$(read_var PROXY_HTTP_CLIENT_URL $config)
+HTTP_SERVER_URL=$HTTP_SERVER_URL
+HTTP_CLIENT_URL=$HTTP_CLIENT_URL
 HTTP_SERVER_HOST=0.0.0.0
 HTTP_SERVER_PORT=$(read_var HTTP_SERVER_PORT $config)
 HTTP_SECURE=$(read_var HTTP_SECURE $config)
@@ -141,6 +152,19 @@ replicate_env() {
     rm $to
   fi
 
+  local ENV=$3
+  local HTTP_SERVER_URL
+  local HTTP_CLIENT_URL
+  if [ $ENV == "production" ]; then
+    HTTP_SERVER_URL=$(read_var PROXY_HTTPS_SERVER_URL $config)
+    WS_BROKER_URL=$(read_var PROXY_WSS_BROKER_URL $config)
+    HTTP_CLIENT_URL=$(read_var PROXY_HTTPS_CLIENT_URL $config)
+  else
+    HTTP_SERVER_URL=$(read_var PROXY_HTTP_SERVER_URL $config)
+    WS_BROKER_URL=$(read_var PROXY_WS_BROKER_URL $config)
+    HTTP_CLIENT_URL=$(read_var PROXY_HTTP_CLIENT_URL $config)
+  fi
+
   echo "# ALOES API CONFIG
 NODE_ENV=$(read_var NODE_ENV $from)
 APP_NAME=$(read_var APP_NAME $from)
@@ -158,6 +182,10 @@ MQTT_BROKER_PORT=$(read_var MQTT_BROKER_PORT $from)
 MQTT_SECURE=$(read_var MQTT_SECURE $from)
 MQTT_TRUST_PROXY=$(read_var MQTT_TRUST_PROXY $from)
 SERVER_LOGGER_LEVEL=$(read_var SERVER_LOGGER_LEVEL $from)
+# VUE APP CONFIG
+VUE_APP_SERVER_URL=$(read_var HTTP_SERVER_URL $from)
+VUE_APP_BROKER_URL=$(read_var WS_BROKER_URL $from)
+VUE_APP_CLIENT_URL=$(read_var HTTP_CLIENT_URL $from)
 # SMTP CONFIG
 SMTP_HOST=$(read_var SMTP_HOST $from)
 SMTP_PORT=$(read_var SMTP_PORT $from)
@@ -433,7 +461,8 @@ init_project () {
   local env_file="$(pwd)/.env"
 
   a=$SECONDS
-  build_proxy $ENV $env_file &
+  build_proxy local $env_file &
+  # build_proxy $ENV $env_file &
   process_id=$!
   wait $process_id
   elapsedseconds=$(( SECONDS - a ))
@@ -441,18 +470,18 @@ init_project () {
   if [ $? == 1 ]; then exit 1 ; fi
 
   a=$SECONDS
-  local PROXY_DOMAIN=$(read_var PROXY_DOMAIN $env_file)
+  local DOMAIN=$(read_var PROXY_SERVER_HOST $env_file)
   local ADMIN_EMAIL=$(read_var ADMIN_EMAIL $env_file)
   local data_path="$(pwd)/config/certbot"
   if [ -d "$data_path" ]; then
-    read -p "Existing data found for $PROXY_DOMAIN. Continue and replace existing certificate? (y/N) " answer
+    read -p "Existing data found for $DOMAIN. Continue and replace existing certificate? (y/N) " answer
     if [ "$answer" != "Y" ] && [ "$answer" != "y" ]; then
       exit
     fi
   fi
   
-  init_ssl $PROXY_DOMAIN $ADMIN_EMAIL &
-  # init_ssl "$PROXY_DOMAIN www.$PROXY_DOMAIN" $ADMIN_EMAIL &
+  init_ssl $DOMAIN $ADMIN_EMAIL $ENV &
+  # init_ssl "$DOMAIN www.$DOMAIN" $ADMIN_EMAIL &
   process_id=$!
   wait $process_id
   elapsedseconds=$(( SECONDS - a ))

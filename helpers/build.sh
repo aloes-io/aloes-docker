@@ -30,7 +30,8 @@ build_proxy () {
   local nginx_template=./aloes-gw.template
 
   local ssl_ready="$3"
-  if [ "$ssl_ready" == "1" ]; then
+  # if [ "$ssl_ready" == "1" ]; then
+  if [ "$1" == "production" ]; then
     nginx_template=./aloes-gw-production.template
   fi
 
@@ -100,7 +101,6 @@ build () {
     exit 1
   fi
 
-  # get servicename from $2
   if [ "$SERVICE" == "proxy" ]; then
     build_proxy $ENV $config
   else

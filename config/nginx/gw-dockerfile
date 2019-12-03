@@ -25,8 +25,7 @@ RUN echo "TCP_SERVER_PORT $TCP_SERVER_PORT"
 RUN echo "PROXY_SERVER_HOST $PROXY_SERVER_HOST"
 
 RUN rm /etc/nginx/conf.d/default.conf
-COPY ./aloes-gw.template /etc/nginx/nginx.template
-# COPY ${NGINX_TEMPLATE} /etc/nginx/nginx.template
+COPY ${NGINX_TEMPLATE} /etc/nginx/nginx.template
 
 RUN mkdir -p /var/www/certbot
 RUN mkdir /etc/letsencrypt

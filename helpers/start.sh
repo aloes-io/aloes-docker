@@ -30,7 +30,8 @@ start_proxy() {
   local NGINX_TEMPLATE=./aloes-gw.template
   
   local ssl_ready="$3"
-  if [ "$ssl_ready" == "1" ]; then
+  # if [ "$ssl_ready" == "1" ]; then
+  if [ "$1" == "production" ]; then
     NGINX_TEMPLATE=./aloes-gw-production.template
   fi
 
@@ -44,6 +45,7 @@ start_proxy() {
 
 
   if [ "$1" == "production" ]; then
+    # docker run -it --rm --name aloes-gw-prod -v "$(pwd)"/config/certbot/www:/var/www/certbot -v "$(pwd)"/config/certbot/conf:/etc/letsencrypt --net="host" aloes-gw-prod
     # start_certbot
     docker run -dit --restart always --name aloes-gw-prod -v "$(pwd)"/config/certbot/www:/var/www/certbot -v "$(pwd)"/config/certbot/conf:/etc/letsencrypt \
       -e "PROXY_SERVER_HOST=$PROXY_SERVER_HOST" -e "HTTP_SERVER_PORT=$HTTP_SERVER_PORT" -e "TCP_SERVER_PORT=$TCP_SERVER_PORT" -e "TIMER_SERVER_PORT=$TIMER_SERVER_PORT" \

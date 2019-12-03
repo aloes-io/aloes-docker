@@ -20,8 +20,11 @@ log() {
 
   # get servicename from $2
   if [ "$SERVICE" == "proxy" ]; then
-    docker logs aloes-gw --follow --tail="100"
-    # docker logs aloes-gw-prod --follow --tail="100"
+    if [ "$ENV" == "production" ]; then
+      docker logs aloes-gw-prod --follow --tail="100"
+    else
+      docker logs aloes-gw --follow --tail="100"
+    fi
   else
     local compose_file="$(pwd)/docker-compose.yml"
     if [ "$ENV" == "production" ]; then

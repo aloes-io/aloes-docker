@@ -20,8 +20,10 @@ init_ssl () {
   local staging
   if [ -z "$3" ]; then
     staging=1
-  else 
-    staging=$3
+  elif [ "$3" == "production" ]; then
+    staging=0
+  else
+    staging=1
   fi
 
   local data_path

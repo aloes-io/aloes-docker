@@ -47,6 +47,10 @@ http {
     # server 172.28.0.1:${HTTP_SERVER_PORT};
   }
 
+  upstream timer_load_balancers {
+    server 127.0.0.1:${TIMER_SERVER_PORT};
+  }
+
   access_log /var/log/nginx/http-gw-access.log combined buffer=32k flush=1m;
   error_log /var/log/nginx/http-gw-error.log warn;
 
@@ -100,7 +104,7 @@ http {
       proxy_set_header X-Forwarded-Proto $scheme;
       proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
       proxy_set_header Forwarded $proxy_add_forwarded;
-      proxy_set_header Access-Control-Allow-Origin $cors_header;
+      # proxy_set_header Access-Control-Allow-Origin $cors_header;
     }  
 
     location /ws {
@@ -116,8 +120,17 @@ http {
       proxy_set_header X-Forwarded-Proto $scheme;
       proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
       proxy_set_header Forwarded $proxy_add_forwarded;
-      proxy_set_header Access-Control-Allow-Origin $cors_header;
-    }  
+      # proxy_set_header Access-Control-Allow-Origin $cors_header;
+    }
+
+    location /timer {
+      proxy_pass http://timer_load_balancers;
+      # proxy_redirect off;
+      proxy_http_version 1.1;
+      proxy_read_timeout 90;
+      proxy_set_header Host $http_host;
+      proxy_set_header X-Scheme $scheme;
+    }
 
     location /.well-known/acme-challenge/ {
       root /var/www/certbot;
