@@ -34,10 +34,10 @@ stop () {
   fi
 
   a=$SECONDS
-  stop_proxy $ENV &
+  stop_services $ENV &
   process_id=$!
   wait $process_id
   elapsedseconds=$(( SECONDS - a ))
-  echo "Stopped proxy with status $? in $elapsedseconds s"
+  echo "Stopped services with status $? in $elapsedseconds s"
 
 }

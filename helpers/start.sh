@@ -47,10 +47,6 @@ start () {
     exit 1
   fi
 
-  # if [ "$ENV" == "production" ]; then
-    # change aloes-lb template ?
-  # fi
-  
   a=$SECONDS
   start_services $ENV &
   process_id=$!

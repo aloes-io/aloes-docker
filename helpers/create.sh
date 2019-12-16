@@ -322,7 +322,7 @@ create_env() {
   if [ "$answer" == "Y" ] || [ "$answer" == "y" ]; then
     env_keys=(PROXY_SERVER_HOST PROXY_HTTP_SERVER_PORT PROXY_MQTT_BROKER_PORT PROXY_HTTP_CLIENT_URL 
       PROXY_HTTP_SERVER_URL PROXY_WS_BROKER_URL PROXY_MQTT_BROKER_URL PROXY_IP PROXY_DOMAIN 
-      PROXY_EXTENSION PROXY_CONFIG_TEMPLATE)
+      PROXY_EXTENSION)
     for env_key in "${env_keys[@]}"; do
       get_value_from_user $env_key $config_tmp $from_env
       set_env $env_key $USER_VAL $config_tmp

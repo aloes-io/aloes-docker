@@ -116,6 +116,7 @@ http {
     }
 
     location /timer {
+      # todo : only authorize requests coming from aloes containers
       proxy_pass http://timer_load_balancers;
       proxy_redirect off;
       proxy_http_version 1.1;

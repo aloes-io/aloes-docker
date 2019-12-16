@@ -43,6 +43,7 @@ init_ssl () {
     local res=$(curl -I -s -L $nginx_ssl_conf_link | grep "HTTP/1.1")
     if [[ "$res" != *"200"* ]]; then
       echo "$res"
+      echo "Fix nginx_ssl_conf_link before trying again"
     else
       curl -s $nginx_ssl_conf_link > "$data_path/conf/options-ssl-nginx.conf"
     fi
@@ -51,6 +52,7 @@ init_ssl () {
     res=$(curl -I -s -L $ssl_dhparams_link | grep "HTTP/1.1")
     if [[ "$res" != *"200"* ]]; then
       echo "$res"
+      echo "Fix ssl_dhparams_link before trying again"
     else
       curl -s $ssl_dhparams_link > "$data_path/conf/ssl-dhparams.pem"
     fi
@@ -71,8 +73,9 @@ init_ssl () {
   echo
 
   echo "### Starting nginx ..."
-  export PROXY_CONFIG_TEMPLATE=aloes-lb.template
+  export PROXY_CONFIG_TEMPLATE=aloes-lb-certonly.template
   docker-compose -f docker-compose.yml up --force-recreate --no-deps -d aloes-lb-1 
+  # export PROXY_CONFIG_TEMPLATE=aloes-lb.template
   # docker-compose -f docker-compose.yml up --force-recreate -d aloes-lb-1 
   sleep 3
   echo
