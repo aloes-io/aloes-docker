@@ -60,43 +60,29 @@ init_ssl () {
   echo "### Creating dummy certificate for $domains ..."
   local path="/etc/letsencrypt/live/$domains"
   mkdir -p "$data_path/conf/live/$domains"
-  
-  # docker stop certbot
-  # docker container rm certbot
 
-  # --mount "type=bind,src=$data_path/conf,dst=/etc/letsencrypt"
-  docker run -i --name certbot-cert -v "$data_path/conf:/etc/letsencrypt" \
-    --entrypoint "/usr/bin/openssl" certbot/certbot req -x509 -nodes -newkey rsa:1024 -days 1\
-      -keyout "$path/privkey.pem"\
-      -out "$path/fullchain.pem"\
-      -subj /CN=localhost
+  docker-compose -f docker-compose.yml run --rm --entrypoint "\
+    openssl req -x509 -nodes -newkey rsa:1024 -days 1\
+      -keyout '$path/privkey.pem' \
+      -out '$path/fullchain.pem' \
+      -subj '/CN=localhost'" certbot
 
-  docker wait certbot-cert
-  docker stop certbot-cert
-  docker container rm certbot-cert
-  # local res=$(docker wait certbot)
-  # if [[ "$res" != "0" ]]; then
-  #   echo "Docker error code : $res"
-  #   exit 1
-  # fi
   sleep 1
   echo
 
   echo "### Starting nginx ..."
-  docker run -d --name aloes-gw-cert -v "$data_path/www:/var/www/certbot" --net="host" aloes-gw
+  export PROXY_CONFIG_TEMPLATE=aloes-lb.template
+  docker-compose -f docker-compose.yml up --force-recreate --no-deps -d aloes-lb-1 
+  # docker-compose -f docker-compose.yml up --force-recreate -d aloes-lb-1 
   sleep 3
   echo
 
   echo "### Deleting dummy certificate for $domains ..."
-  docker run -i --name certbot-cert -v "$data_path/conf:/etc/letsencrypt" \
-    --entrypoint "rm" certbot/certbot -Rf "/etc/letsencrypt/live/$domains" && \
-      rm -Rf "/etc/letsencrypt/archive/$domains" && rm -Rf "/etc/letsencrypt/renewal/$domains.conf"
-  docker wait certbot-cert
-  docker stop certbot-cert
-  docker container rm certbot-cert
+  docker-compose -f docker-compose.yml run --rm --entrypoint "\
+    rm -Rf /etc/letsencrypt/live/$domains && \
+    rm -Rf /etc/letsencrypt/archive/$domains && \
+    rm -Rf /etc/letsencrypt/renewal/$domains.conf" certbot
   sleep 1
-  # rm -Rf "$data_path/conf/live/$domains" && rm -Rf "$data_path/conf/archive/$domains" \
-  #   && rm -Rf "$data_path/conf/renewal/$domains.conf"
   echo
 
   echo "### Requesting Let's Encrypt certificate for $domains ..."
@@ -115,23 +101,17 @@ init_ssl () {
   # Enable staging mode if needed
   if [ $staging != "0" ]; then staging_arg="--staging"; fi
 
-  docker run -i --name certbot-cert -v "$data_path/www:/var/www/certbot" -v "$data_path/conf:/etc/letsencrypt" \
-    --entrypoint "certbot" certbot/certbot certonly --non-interactive --webroot -w /var/www/certbot \
-    $staging_arg \
-    $email_arg \
-    $domain_args \
-    --rsa-key-size $rsa_key_size \
-    --agree-tos --force-renewal
-  
-  docker stop certbot-cert
-  docker container rm certbot-cert
+  docker-compose -f docker-compose.yml run --rm --entrypoint "\
+    certbot certonly --webroot -w /var/www/certbot \
+      $staging_arg \
+      $email_arg \
+      $domain_args \
+      --rsa-key-size $rsa_key_size \
+      --agree-tos \
+      --force-renewal" certbot
   sleep 1
   echo
 
-  # echo "### Reloading nginx ..."
-  # docker exec -d aloes-gw-cert nginx -s reload
-
-  echo "### Stopping nginx ..."
-  docker stop aloes-gw-cert
-  docker container rm aloes-gw-cert
+  echo "### Reloading nginx ..."
+  docker-compose -f docker-compose.yml exec aloes-lb-1 nginx -s reload
 }

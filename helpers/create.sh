@@ -32,7 +32,6 @@ get_value_from_user() {
     variable_default=$(read_var $current_key .env.sample)
   fi
 
-  # local variable_default=$(read_var $current_key .env.sample)
 	echo -n "$current_key (default=$variable_default) :"
 	read USER_VAL
 	if [ -z "$USER_VAL" ]; then 
@@ -81,13 +80,13 @@ HTTP_SERVER_PORT=$(read_var HTTP_SERVER_PORT $config)
 HTTP_SECURE=$(read_var HTTP_SECURE $config)
 HTTP_TRUST_PROXY=$(read_var HTTP_TRUST_PROXY $config)
 REST_API_ROOT=$(read_var REST_API_ROOT $config)
-COOKIE_SECRET=
+COOKIE_SECRET=$(read_var COOKIE_SECRET $config)
 MQTT_BROKER_URL=$(read_var PROXY_MQTT_BROKER_URL $config)
 MQTT_BROKER_PORT=$(read_var MQTT_BROKER_PORT $config)
 MQTTS_BROKER_URL=$(read_var PROXY_MQTTS_BROKER_URL $config)
 MQTT_SECURE=$(read_var MQTT_SECURE $config)
 MQTT_TRUST_PROXY=$(read_var MQTT_TRUST_PROXY $config)
-MQTTS_SELF_SIGNED_CERT=
+MQTTS_SELF_SIGNED_CERT=$(read_var MQTTS_SELF_SIGNED_CERT $config)
 WS_BROKER_PORT=$(read_var WS_BROKER_PORT $config)
 SERVER_LOGGER_LEVEL=$(read_var SERVER_LOGGER_LEVEL $config)
 SMTP_HOST=$(read_var SMTP_HOST $config)
@@ -115,7 +114,6 @@ INFLUX_PASS=$(read_var INFLUX_PASS $config)
 OCD_API_KEY=$(read_var OCD_API_KEY $config)
 EXTERNAL_TIMER=$(read_var EXTERNAL_TIMER $config)
 TIMER_SERVER_URL=$(read_var TIMER_SERVER_URL $config)
-TIMER_SERVER_PORT=$(read_var TIMER_SERVER_PORT $config)
 FS_PATH=./storage
 GITHUB_CLIENT_ID_LOGIN=$(read_var GITHUB_CLIENT_ID_LOGIN $config)
 GITHUB_CLIENT_SECRET_LOGIN=$(read_var GITHUB_CLIENT_SECRET_LOGIN $config)
@@ -126,6 +124,7 @@ INSTANCES_COUNT=1" >> "$aloes_config"
 }
 
 # replicate_env() {
+  # using an .env.template ?
   # envsubst '$${NODE_ENV},$${APP_NAME},$${ALOES_ID},$${ALOES_KEY},$${NODE_ENV},$${APP_NAME},$${ADMIN_EMAIL},$${CONTACT_EMAIL},$${HTTP_SERVER_PORT},$${HTTP_SECURE},\
   # $${HTTP_TRUST_PROXY},$${REST_API_ROOT},$${COOKIE_SECRET},$${WS_BROKER_PORT},$${MQTT_BROKER_PORT},$${MQTT_SECURE},$${MQTT_TRUST_PROXY},$${SERVER_LOGGER_LEVEL},\
   # $${SMTP_HOST},$${SMTP_PORT},$${SMTP_SECURE},$${SMTP_USER},$${SMTP_PASS},\
@@ -155,14 +154,17 @@ replicate_env() {
   local ENV=$3
   local HTTP_SERVER_URL
   local HTTP_CLIENT_URL
+  local WS_BROKER_URL
   if [ "$ENV" == "production" ]; then
     HTTP_SERVER_URL=$(read_var PROXY_HTTPS_SERVER_URL $from)
     WS_BROKER_URL=$(read_var PROXY_WSS_BROKER_URL $from)
     HTTP_CLIENT_URL=$(read_var PROXY_HTTPS_CLIENT_URL $from)
+    PROXY_CONFIG_TEMPLATE=aloes-lb-production.template
   else
     HTTP_SERVER_URL=$(read_var PROXY_HTTP_SERVER_URL $from)
     WS_BROKER_URL=$(read_var PROXY_WS_BROKER_URL $from)
     HTTP_CLIENT_URL=$(read_var PROXY_HTTP_CLIENT_URL $from)
+    PROXY_CONFIG_TEMPLATE=aloes-lb.template
   fi
 
   echo "# ALOES API CONFIG
@@ -176,7 +178,7 @@ HTTP_SERVER_PORT=$(read_var HTTP_SERVER_PORT $from)
 HTTP_SECURE=$(read_var HTTP_SECURE $from)
 HTTP_TRUST_PROXY=$(read_var HTTP_TRUST_PROXY $from)
 REST_API_ROOT=$(read_var REST_API_ROOT $from)
-COOKIE_SECRET=
+COOKIE_SECRET=$(read_var COOKIE_SECRET $from)
 WS_BROKER_PORT=$(read_var WS_BROKER_PORT $from)
 MQTT_BROKER_PORT=$(read_var MQTT_BROKER_PORT $from)
 MQTT_SECURE=$(read_var MQTT_SECURE $from)
@@ -221,22 +223,18 @@ OCD_API_KEY=$(read_var OCD_API_KEY $from)
 # TIMER CONFIG
 EXTERNAL_TIMER=$(read_var EXTERNAL_TIMER $from)
 TIMER_SERVER_URL=$(read_var TIMER_SERVER_URL $from)
-TIMER_SERVER_PORT=$(read_var TIMER_SERVER_PORT $from)
 # GITHUB CONFIG
 GITHUB_CLIENT_ID_LOGIN=$(read_var GITHUB_CLIENT_ID_LOGIN $from)
 GITHUB_CLIENT_SECRET_LOGIN=$(read_var GITHUB_CLIENT_SECRET_LOGIN $from)
 GITHUB_CLIENT_ID_LINK=$(read_var GITHUB_CLIENT_ID_LINK $from)
 GITHUB_CLIENT_SECRET_LINK=$(read_var GITHUB_CLIENT_SECRET_LINK $from)
 GIT_REPO_SSH_URL=git@framagit.org:aloes/aloes-docker.git
-# LOAD BALANCER CONFIG
-LB_SERVER_HOST=$(read_var LB_SERVER_HOST $from)
-LB_HTTP_SERVER_PORT=$(read_var LB_HTTP_SERVER_PORT $from)
-LB_TCP_SERVER_PORT=$(read_var LB_TCP_SERVER_PORT $from)
 # PROXY CONFIG
 PROXY_SERVER_HOST=$(read_var PROXY_SERVER_HOST $from)
 PROXY_DOMAIN=$(read_var PROXY_DOMAIN $from)
 PROXY_EXTENSION=$(read_var PROXY_EXTENSION $from)
 PROXY_IP=$(read_var PROXY_IP $from)
+PROXY_CONFIG_TEMPLATE=$PROXY_CONFIG_TEMPLATE
 PROXY_HTTP_CLIENT_URL=$(read_var PROXY_HTTP_CLIENT_URL $from)
 PROXY_HTTPS_CLIENT_URL=$(read_var PROXY_HTTPS_CLIENT_URL $from)
 PROXY_HTTP_SERVER_PORT=$(read_var PROXY_HTTP_SERVER_PORT $from)
@@ -319,20 +317,12 @@ create_env() {
     done
   fi
 
-  read -p "Would you like to configure Nginx load balancer ? (y/N) " answer
-  if [ "$answer" == "Y" ] || [ "$answer" == "y" ]; then
-    env_keys=(LB_SERVER_HOST LB_HTTP_SERVER_PORT LB_TCP_SERVER_PORT)
-    for env_key in "${env_keys[@]}"; do
-      get_value_from_user $env_key $config_tmp $from_env
-      set_env $env_key $USER_VAL $config_tmp
-    done
-  fi
-
   # todo set default PROXY_IP based on machine ip ?
   read -p "Would you like to configure Nginx proxy ? (y/N) " answer
   if [ "$answer" == "Y" ] || [ "$answer" == "y" ]; then
     env_keys=(PROXY_SERVER_HOST PROXY_HTTP_SERVER_PORT PROXY_MQTT_BROKER_PORT PROXY_HTTP_CLIENT_URL 
-      PROXY_HTTP_SERVER_URL PROXY_WS_BROKER_URL PROXY_MQTT_BROKER_URL PROXY_IP PROXY_DOMAIN PROXY_EXTENSION)
+      PROXY_HTTP_SERVER_URL PROXY_WS_BROKER_URL PROXY_MQTT_BROKER_URL PROXY_IP PROXY_DOMAIN 
+      PROXY_EXTENSION PROXY_CONFIG_TEMPLATE)
     for env_key in "${env_keys[@]}"; do
       get_value_from_user $env_key $config_tmp $from_env
       set_env $env_key $USER_VAL $config_tmp
@@ -371,7 +361,7 @@ create_env() {
       del_env EXTERNAL_TIMER $config_tmp
     fi
     set_env EXTERNAL_TIMER true $config_tmp
-    env_keys=(TIMER_SERVER_URL TIMER_SERVER_PORT)
+    env_keys=(TIMER_SERVER_URL)
     for env_key in "${env_keys[@]}"; do
       get_value_from_user $env_key $config_tmp $from_env
       set_env $env_key $USER_VAL $config_tmp
@@ -450,7 +440,6 @@ create_env() {
 }
 
 init_project () {
-  # todo add a function to create A and AAAA DNS redirection ?
   if [ -z "$1" ]; then
     echo "Environment variable name is required to init project"
     exit 1
@@ -460,12 +449,12 @@ init_project () {
   local env_file="$(pwd)/.env"
 
   a=$SECONDS
-  build_proxy local $env_file &
-  # build_proxy $ENV $env_file &
+  # build local $env_file &
+  build $ENV $env_file &
   process_id=$!
   wait $process_id
   elapsedseconds=$(( SECONDS - a ))
-  echo "Built proxy with status $? in $elapsedseconds s"
+  echo "Built services with status $? in $elapsedseconds s"
   if [ $? == 1 ]; then exit 1 ; fi
 
   a=$SECONDS
@@ -479,11 +468,13 @@ init_project () {
     fi
   fi
   
+  # export PROXY_CONFIG_TEMPLATE=aloes-lb.template
   init_ssl $DOMAIN $ADMIN_EMAIL $ENV &
   # init_ssl "$DOMAIN www.$DOMAIN" $ADMIN_EMAIL &
   process_id=$!
   wait $process_id
   elapsedseconds=$(( SECONDS - a ))
+  # unset PROXY_CONFIG_TEMPLATE
   echo "Created ssl certificates with status $? in $elapsedseconds s"
   if [ "$?" != "0" ]; then exit 1 ; fi
 
@@ -501,16 +492,18 @@ create() {
 When prompted type your answer, followed by [ENTER]"
   sleep 1
   create_env $ENV
-  # process_id=$!
-  # wait $process_id
+
+  # todo add a function to create A and AAAA DNS redirection at domain provider ?
+
   read -p "Would you like to generate ssl certificates now ? (y/N) " answer
   if [ "$answer" != "Y" ] && [ "$answer" != "y" ]; then
     exit
-  else 
+  else
+    echo "Building services ..."
     init_project $ENV
   fi
 
-  # if [ $? -ne 0 ]; then
-  #   echo "Aloes environment creation cancelled"
-  # fi
+  if [ $? -ne 0 ]; then
+    echo "Aloes environment creation cancelled"
+  fi
 }

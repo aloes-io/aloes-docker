@@ -1,4 +1,4 @@
-# Aloes-docker is a process manager to deploy aloes ecosystem
+# Aloes-docker is a process manager to help deploying a complete aloes ecosystem
 
 # Copyright 2019 Edouard Maleix
 
@@ -21,7 +21,7 @@ networks:
   skyring:
     driver: bridge
   aloes:
-    driver: overlay
+    driver: bridge
 
 services:
   mongo:
@@ -212,8 +212,9 @@ services:
     restart: always
     volumes:
       - ./config/nginx/skyring.conf:/etc/nginx/nginx.conf
-    ports:
-      - '${TIMER_SERVER_PORT}:80'
+    # ports:
+      # - '${TIMER_SERVER_PORT}:80'
+      # - '127.0.0.1:${TIMER_SERVER_PORT}:80'
     networks:
       - skyring
     depends_on:
@@ -224,6 +225,7 @@ services:
       - timer-5
 
   mqtt-api-1:
+    hostname: mqtt-api-1
     env_file: ./config/device-manager/.env
     environment:
       - SERVER_LOGGER_LEVEL=4
@@ -238,10 +240,13 @@ services:
     restart: always
     depends_on:
       - redis
+    # ports:
+    #   - '127.0.0.1:1885:${MQTT_BROKER_PORT}'
     networks:
       - aloes
 
   mqtt-api-2:
+    hostname: mqtt-api-2
     env_file: ./config/device-manager/.env
     environment:
       - SERVER_LOGGER_LEVEL=4
@@ -257,6 +262,8 @@ services:
     depends_on:
       - redis
       - mqtt-api-1
+    # ports:
+    #   - '127.0.0.1:1886:${MQTT_BROKER_PORT}'
     networks:
       - aloes
 
@@ -363,7 +370,7 @@ services:
         - VUE_APP_CLIENT_URL=${VUE_APP_CLIENT_URL}
         - VUE_APP_LOGGER_LEVEL=4
         - GIT_REPO_SSH_URL=git@framagit.org:aloes/aloes-client.git
-    image: aloes/aloes-client:0.5
+    image: aloes/aloes-client:latest
     depends_on:
       - mqtt-api-1
       - mqtt-api-2
@@ -373,22 +380,36 @@ services:
     networks:
       - aloes
 
+  certbot:
+    image: certbot/certbot
+    restart: always
+    volumes:
+      - ./config/certbot/conf:/etc/letsencrypt
+      - ./config/certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+
   aloes-lb-1:
     environment:
       - WS_BROKER_PORT=${WS_BROKER_PORT}
       - MQTT_BROKER_PORT=${MQTT_BROKER_PORT}
       - HTTP_SERVER_PORT=${HTTP_SERVER_PORT}
-      - LB_HTTP_SERVER_PORT=${LB_HTTP_SERVER_PORT}
-      - LB_TCP_SERVER_PORT=${LB_TCP_SERVER_PORT}
-      - LB_SERVER_HOST=${LB_SERVER_HOST}
-      - PROXY_IP=${PROXY_IP}
+      - PROXY_HTTP_SERVER_PORT=${PROXY_HTTP_SERVER_PORT}
+      - PROXY_HTTPS_SERVER_PORT=${PROXY_HTTPS_SERVER_PORT}
+      - PROXY_MQTT_BROKER_PORT=${PROXY_MQTT_BROKER_PORT}
+      - PROXY_MQTTS_BROKER_PORT=${PROXY_MQTTS_BROKER_PORT}
+      - PROXY_SERVER_HOST=${PROXY_SERVER_HOST}
+      - PROXY_DOMAIN=${PROXY_DOMAIN}
+      - PROXY_EXTENSION=${PROXY_EXTENSION}
+      # - PROXY_IP=${PROXY_IP}
     build:
       context: ./config/nginx/
       dockerfile: lb-dockerfile
     restart: always
     volumes:
-      - ./config/nginx/aloes-lb.template:/etc/nginx/nginx.template
-      - ./log/nginx:/etc/nginx/log
+      - ./config/nginx/${PROXY_CONFIG_TEMPLATE}:/etc/nginx/nginx.template
+      - ./log/nginx:/var/log/nginx
+      - ./config/certbot/www:/var/www/certbot
+      - ./config/certbot/conf:/etc/letsencrypt
     depends_on:
       - mqtt-api-1
       - mqtt-api-2
@@ -396,12 +417,15 @@ services:
       - http-api-2
       - http-api-3
       - client
+      - certbot
     ports:
-      - '${LB_HTTP_SERVER_PORT}:${LB_HTTP_SERVER_PORT}'
-      - '${LB_TCP_SERVER_PORT}:${LB_TCP_SERVER_PORT}'
+      - '${PROXY_HTTP_SERVER_PORT}:${PROXY_HTTP_SERVER_PORT}'
+      - '${PROXY_MQTT_BROKER_PORT}:${PROXY_MQTT_BROKER_PORT}'
+      # - '${PROXY_HTTPS_SERVER_PORT}:${PROXY_HTTPS_SERVER_PORT}'
+      # - '${PROXY_MQTTS_BROKER_PORT}:${PROXY_MQTTS_BROKER_PORT}'
     networks:
       - aloes
-    command: /bin/bash -c "envsubst '$${HTTP_SERVER_PORT},$${WS_BROKER_PORT},$${MQTT_BROKER_PORT},$${LB_TCP_SERVER_PORT},$${LB_HTTP_SERVER_PORT},$${LB_SERVER_HOST},$${PROXY_IP}' < /etc/nginx/nginx.template > /etc/nginx/nginx.conf && exec nginx -g 'daemon off;'"
+      - skyring
 
 volumes:
   mongovolume:

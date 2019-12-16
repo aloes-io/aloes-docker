@@ -19,24 +19,14 @@ log() {
   fi
 
   # get servicename from $2
-  if [ "$SERVICE" == "proxy" ]; then
-    if [ "$ENV" == "production" ]; then
-      docker logs aloes-gw-prod --follow --tail="100"
-    else
-      docker logs aloes-gw --follow --tail="100"
-    fi
-  else
-    local compose_file="$(pwd)/docker-compose.yml"
-    if [ "$ENV" == "production" ]; then
-      compose_file="$(pwd)/docker-compose-prod.yml"
-    fi
 
-    echo "Log $compose_file containers"
-    docker-compose --compatibility -f $compose_file logs --follow --tail="100"
+  local compose_file="$(pwd)/docker-compose.yml"
 
-    if [ $? -ne 0 ]; then
-      echo "Docker-compose cancelled logging"
-    fi
+  echo "Log $compose_file containers"
+  docker-compose --compatibility -f $compose_file logs --follow --tail="100"
+
+  if [ $? -ne 0 ]; then
+    echo "Docker-compose cancelled logging"
   fi
 
 

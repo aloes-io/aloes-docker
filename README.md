@@ -28,7 +28,7 @@ sudo systemctl enable docker.service
 
 Many developers using nginx inside docker uncountered this [issue](https://github.com/jwilder/nginx-proxy/issues/133)
 
-Update hosts file to point your servername to the loopback network ?
+Update hosts file to point your servername to the loopback network ( not sure it helped ).
 
 
 ## Setup
@@ -165,8 +165,6 @@ or using shortcut :
 - Replicate Mongo and Redis servers
 
 - Use docker swarm to deploy on several machines
-
-- Use aloes.sh to create .env file via interactive session
 
 - Use aloes.sh to configure dynamically docker-compose file ?
 

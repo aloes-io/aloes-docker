@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# todo : chmod of dependencies if needed
 DIR="${BASH_SOURCE%/*}"
 if [[ ! -d "$DIR" ]]; then DIR="$PWD"; fi
 . "$DIR/helpers/build.sh"
@@ -11,7 +10,7 @@ if [[ ! -d "$DIR" ]]; then DIR="$PWD"; fi
 . "$DIR/helpers/log.sh"
 . "$DIR/helpers/start.sh"
 . "$DIR/helpers/stop.sh"
-. "$DIR/config/certbot/letsencrypt-init.sh"
+. "$DIR/helpers/letsencrypt-init.sh"
 
 usage() {
 	echo "Usage $0 -c command_name -e env_name
@@ -47,9 +46,9 @@ get_mac_address() {
 		mac_address=$(cat /sys/class/net/$interface/address)
 	elif [ -f "/sys/class/net/eth0/address" ]; then
 		mac_address=$(cat /sys/class/net/eth0/address)
-	elif [[ -f "/sys/class/net/wlan0/address" ]]; then
+	elif [ -f "/sys/class/net/wlan0/address" ]; then
 		mac_address=$(cat /sys/class/net/wlan0/address)
-	elif [[ -f "/sys/class/net/wlp2s0/address" ]]; then
+	elif [ -f "/sys/class/net/wlp2s0/address" ]; then
 		mac_address=$(cat /sys/class/net/wlp2s0/address)
 	fi
 
@@ -90,7 +89,7 @@ is_valid_command() {
   return 1
 }
 
-# echo  LOGO NAME
+# echo LOGO, NAME
 # COPYRIGHTS LICENSE
 # DESCRIPTION
 
@@ -158,6 +157,7 @@ elif [ "$CMD" == "create" ]; then
     # read -p "Would you like to build your project now ? (y/N) " answer
 elif [ "$CMD" == "delete" ]; then
 	echo "$CMD containers for $ENV environment"
+	# not working yet
 	delete $ENV
 else
 	echo "Invalid command"
