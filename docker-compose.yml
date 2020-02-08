@@ -47,6 +47,8 @@ services:
       - INFLUXDB_ADMIN_PASSWORD=${INFLUX_ADMIN_PASSWORD}
       - INFLUXDB_USER=${INFLUX_USER}
       - INFLUXDB_USER_PASSWORD=${INFLUX_PASS}
+      - INFLUXDB_REPORTING_DISABLED=true
+      - INFLUXDB_BIND_ADDRESS=127.0.0.1:8088
     image: influxdb:1.7-alpine
     restart: always
     volumes:
@@ -212,9 +214,6 @@ services:
     restart: always
     volumes:
       - ./config/nginx/skyring.conf:/etc/nginx/nginx.conf
-    # ports:
-      # - '${TIMER_SERVER_PORT}:80'
-      # - '127.0.0.1:${TIMER_SERVER_PORT}:80'
     networks:
       - skyring
     depends_on:
@@ -232,7 +231,7 @@ services:
       - HTTP_INSTANCES_COUNT=6
       - MQTT_INSTANCES_COUNT=2
     build:
-      context: https://framagit.org/aloes/device-manager.git#staging
+      context: https://framagit.org/aloes/device-manager.git#master
       dockerfile: ./config/docker/broker.dockerfile
     image: aloes/mqtt-api:latest
     volumes:
@@ -240,8 +239,6 @@ services:
     restart: always
     depends_on:
       - redis
-    # ports:
-    #   - '127.0.0.1:1885:${MQTT_BROKER_PORT}'
     networks:
       - aloes
 
@@ -253,7 +250,7 @@ services:
       - HTTP_INSTANCES_COUNT=6
       - MQTT_INSTANCES_COUNT=2
     build:
-      context: https://framagit.org/aloes/device-manager.git#staging
+      context: https://framagit.org/aloes/device-manager.git#master
       dockerfile: ./config/docker/broker.dockerfile
     image: aloes/mqtt-api:latest
     volumes:
@@ -262,8 +259,6 @@ services:
     depends_on:
       - redis
       - mqtt-api-1
-    # ports:
-    #   - '127.0.0.1:1886:${MQTT_BROKER_PORT}'
     networks:
       - aloes
 
@@ -276,7 +271,7 @@ services:
       - HTTP_INSTANCES_COUNT=6
       - MQTT_INSTANCES_COUNT=2
     build:
-      context: https://framagit.org/aloes/device-manager.git#staging
+      context: https://framagit.org/aloes/device-manager.git#master
       dockerfile: ./config/docker/server.dockerfile
     image: aloes/http-api:latest
     restart: always
@@ -302,7 +297,7 @@ services:
       - HTTP_INSTANCES_COUNT=6
       - MQTT_INSTANCES_COUNT=2
     build:
-      context: https://framagit.org/aloes/device-manager.git#staging
+      context: https://framagit.org/aloes/device-manager.git#master
       dockerfile: ./config/docker/server.dockerfile
     image: aloes/http-api:latest
     restart: always
@@ -329,7 +324,7 @@ services:
       - HTTP_INSTANCES_COUNT=6
       - MQTT_INSTANCES_COUNT=2
     build:
-      context: https://framagit.org/aloes/device-manager.git#staging
+      context: https://framagit.org/aloes/device-manager.git#master
       dockerfile: ./config/docker/server.dockerfile
     image: aloes/http-api:latest
     restart: always
@@ -359,7 +354,7 @@ services:
       - VUE_APP_LOGGER_LEVEL=4
       - GIT_REPO_SSH_URL=git@framagit.org:aloes/aloes-client.git
     build:
-      context: https://framagit.org/aloes/aloes-client.git#staging
+      context: https://framagit.org/aloes/aloes-client.git#master
       dockerfile: Dockerfile
       args:
         - VUE_APP_NAME=${APP_NAME}
@@ -417,6 +412,7 @@ services:
       - http-api-2
       - http-api-3
       - client
+      - timer-proxy
       - certbot
     ports:
       - '${PROXY_HTTP_SERVER_PORT}:${PROXY_HTTP_SERVER_PORT}'

@@ -33,6 +33,8 @@ Update hosts file to point your servername to the loopback network ( not sure it
 
 ## Setup
 
+Manually :
+
 - Create `.env` at root 
 
 - Create `.env.local` and/or `.env` in `./config/device-manager/`
@@ -41,42 +43,56 @@ Update hosts file to point your servername to the loopback network ( not sure it
 
 - Create `.env.local` and/or `.env` in `./config/influxdb/`
 
+or using helper :
+
+```bash
+chmod a+x ./aloes.sh
+
+./aloes.sh --command create
+
+./aloes.sh -c create -e local
+```
 
 If you intend to run in local mode ( no domain redirection ), you just have to configure environment variables and config files.
 
 ## Create HTTPS certificates
 
-- First you either have to configure nginx to use a temporary config file located in `./config/nginx/nginx-tmp.template` or comment out ssl config from `./config/nginx/nginx-production.template` and start every services.
+- First you have to configure properly PROXY_SERVER_HOST and PROXY_DOMAIN in `.env`.
 
-- Update `./config/certbot/letsencrypt-init.sh` with your domains and email and staging mode
+Using helper, after creating environment variables, you will be asked to generate SSL certs too :
 
 ```bash
-chmod a+x config/certbot/letsencypt-init.sh 
-
-sudo ./config/certbot/letsencrypt-init.sh
-
-docker logs --tail 50 --follow aloes-docker_api-proxy_1
+./aloes.sh -c create --env production
 ```
 
-## Backup MongoDB
+## Backup and restore MongoDB
 
 ```bash
+chmod a+x ./config/mongo/mongodump.sh
 ./config/mongo/mongodump.sh -db aloes_test -c aloes-docker_mongo_1 -u aloes --password example
+
+chmod a+x ./config/mongo/mongorestore.sh
+./config/mongo/mongorestore.sh -d aloes_test -db aloes_test -c aloes-docker_mongo_1 -u aloes -p example
 ```
 
-## Restore MongoDB
+## Backup and restore InfluxDB
 
 ```bash
-./config/mongo/./mongorestore.sh -d aloes_test -db aloes_test -c aloes-docker_mongo_1 -u aloes -p example
+chmod a+x ./config/influx/influxdump.sh
+./config/influx/influxdump.sh -db aloes_test -c aloes-docker_influxdb_1 -u aloes --password example
+
+chmod a+x ./config/influx/influxrestore.sh
+./config/influx/influxrestore.sh -d aloes_test -db aloes_test -c aloes-docker_influxdb_1 -u aloes -p example
 ```
+
 ## Display config
 
 ```bash
 docker-compose config
 
-docker-compose -f docker-compose.prod.yml config
+docker-compose -f docker-compose.yml config
 ```
-or using shortcut :
+or using helper :
 
 ```bash
 ./test-conf.sh
@@ -89,13 +105,13 @@ or using shortcut :
 ```bash
 docker-compose --compatibility build 
 
-docker-compose --compatibility -f docker-compose.prod.yml build 
+docker-compose --compatibility -f docker-compose.yml build 
 
-docker-compose  -f docker-compose.prod.yml build <service_name>
+docker-compose  -f docker-compose.yml build <service_name>
 
-docker-compose  -f docker-compose.prod.yml --no-deps --build <service_name> up
+docker-compose  -f docker-compose.yml --no-deps --build <service_name> up
 ```
-or using shortcut :
+or using helper :
 
 ```bash
 ./aloes.sh --command build
@@ -112,9 +128,9 @@ docker-compose --compatibility up
 
 docker-compose --compatibility up -d
 
-docker-compose --compatibility -f docker-compose.prod.yml up -d
+docker-compose --compatibility -f docker-compose.yml up -d
 ```
-or using shortcut :
+or using helper :
 
 ```bash
 ./aloes.sh -c start
@@ -130,9 +146,9 @@ or using shortcut :
 ```bash
 docker-compose --compatibility down
 
-docker-compose -f docker-compose.prod.yml down
+docker-compose -f docker-compose.yml down
 ```
-or using shortcut :
+or using helper :
 
 ```bash
 ./aloes.sh -c stop
@@ -148,9 +164,9 @@ or using shortcut :
 ```bash
 docker-compose --compatibility logs --follow --tail="100"
 
-docker-compose --compatibility -f docker-compose.prod.yml logs --follow --tail="100"
+docker-compose --compatibility -f docker-compose.yml logs --follow --tail="100"
 ```
-or using shortcut :
+or using helper :
 
 ```bash
 ./aloes.sh -c log
@@ -166,5 +182,5 @@ or using shortcut :
 
 - Use docker swarm to deploy on several machines
 
-- Use aloes.sh to configure dynamically docker-compose file ?
+- Use aloes.sh to configure dynamically docker-compose services ?
 
