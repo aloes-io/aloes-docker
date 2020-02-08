@@ -1,0 +1,27 @@
+# Copyright 2019 Edouard Maleix, read LICENSE
+
+worker_processes 8;
+
+events { 
+  worker_connections 2048; 
+}
+
+http {
+
+  server {
+    listen ${PROXY_HTTP_SERVER_PORT};
+    listen [::]:${PROXY_HTTP_SERVER_PORT} ipv6only=on;
+    server_name ${PROXY_SERVER_HOST};
+
+    location /.well-known/acme-challenge/ {
+      root /var/www/certbot;
+    }
+
+    error_page   500 502 503 504  /50x.html;
+    
+    location = /50x.html {
+      root   /usr/share/nginx/html;
+    }
+
+	}
+}

@@ -1,0 +1,9 @@
+# .gitignore log content
+###################
+
+# ignore all files in this dir...
+*
+
+# ... except these
+!.gitignore
+!redis.template
