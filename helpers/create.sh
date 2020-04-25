@@ -105,12 +105,12 @@ REDIS_MQTT_PERSISTENCE=$(read_var REDIS_MQTT_PERSISTENCE $config)
 REDIS_MQTT_EVENTS=$(read_var REDIS_MQTT_EVENTS $config)
 REDIS_COLLECTIONS=$(read_var REDIS_COLLECTIONS $config)
 REDIS_PASS=$(read_var REDIS_PASS $config)
-INFLUX_PROTOCOL=http
-INFLUX_HOST=$(read_var INFLUX_HOST $config)
-INFLUX_PORT=$(read_var INFLUX_PORT $config)
-INFLUX_COLLECTION=$(read_var INFLUX_COLLECTION $config)
-INFLUX_USER=$(read_var INFLUX_USER $config)
-INFLUX_PASS=$(read_var INFLUX_PASS $config)
+INFLUXDB_PROTOCOL=http
+INFLUXDB_HOST=$(read_var INFLUXDB_HOST $config)
+INFLUXDB_PORT=$(read_var INFLUXDB_PORT $config)
+INFLUXDB_DB=$(read_var INFLUXDB_DB $config)
+INFLUXDB_USER=$(read_var INFLUXDB_USER $config)
+INFLUXDB_USER_PASSWORD=$(read_var INFLUXDB_USER_PASSWORD $config)
 OCD_API_KEY=$(read_var OCD_API_KEY $config)
 EXTERNAL_TIMER=$(read_var EXTERNAL_TIMER $config)
 TIMER_SERVER_URL=$(read_var TIMER_SERVER_URL $config)
@@ -130,7 +130,7 @@ INSTANCES_COUNT=1" >> "$aloes_config"
   # $${SMTP_HOST},$${SMTP_PORT},$${SMTP_SECURE},$${SMTP_USER},$${SMTP_PASS},\
   # $${MONGO_HOST},$${MONGO_PORT},$${MONGO_COLLECTION},$${MONGO_ADMIN_USERNAME},$${MONGO_ADMIN_PASSWORD},$${MONGO_USER},$${MONGO_PASS},\
   # $${REDIS_HOST},$${REDIS_PORT},$${REDIS_MQTT_PERSISTENCE},$${REDIS_MQTT_EVENTS},$${REDIS_COLLECTIONS},$${REDIS_PASS},\
-  # $${INFLUX_HOST},$${INFLUX_PORT},$${INFLUX_COLLECTION},$${INFLUX_ADMIN_ENABLED},$${INFLUX_ADMIN_USER},$${INFLUX_ADMIN_PASSWORD},$${INFLUX_USER},$${INFLUX_PASS},\
+  # $${INFLUXDB_HOST},$${INFLUXDB_PORT},$${INFLUXDB_DB},$${INFLUX_ADMIN_ENABLED},$${INFLUX_ADMIN_USER},$${INFLUX_ADMIN_PASSWORD},$${INFLUXDB_USER},$${INFLUXDB_USER_PASSWORD},\
   # $${OCD_API_KEY},$${EXTERNAL_TIMER},$${TIMER_SERVER_URL},$${TIMER_SERVER_PORT},\
   # $${GITHUB_CLIENT_ID_LOGIN},$${GITHUB_CLIENT_SECRET_LOGIN},$${GITHUB_CLIENT_ID_LINK},$${GITHUB_CLIENT_SECERT_LINK},$${GIT_REPO_SSH_URL}\
   # $${LB_SERVER_HOST},$${LB_HTTP_SERVER_PORT},$${LB_TCP_SERVER_PORT},\
@@ -184,6 +184,10 @@ MQTT_BROKER_PORT=$(read_var MQTT_BROKER_PORT $from)
 MQTT_SECURE=$(read_var MQTT_SECURE $from)
 MQTT_TRUST_PROXY=$(read_var MQTT_TRUST_PROXY $from)
 SERVER_LOGGER_LEVEL=$(read_var SERVER_LOGGER_LEVEL $from)
+# ALOES GRAPHQL API CONFIG
+GRAPHQL_SERVER_PATH=$(read_var GRAPHQL_SERVER_PATH $from)
+GRAPHQL_HTTP_SERVER_PORT=$(read_var GRAPHQL_HTTP_SERVER_PORT $from)
+GRAPHQL_WS_SERVER_PORT=$(read_var GRAPHQL_WS_SERVER_PORT $from)
 # VUE APP CONFIG
 VUE_APP_SERVER_URL=$HTTP_SERVER_URL 
 VUE_APP_BROKER_URL=$WS_BROKER_URL
@@ -210,14 +214,14 @@ REDIS_MQTT_EVENTS=$(read_var REDIS_MQTT_EVENTS $from)
 REDIS_COLLECTIONS=$(read_var REDIS_COLLECTIONS $from)
 REDIS_PASS=$(read_var REDIS_PASS $from)
 # INFLUXDB CONFIG
-INFLUX_HOST=$(read_var INFLUX_HOST $from)
-INFLUX_PORT=$(read_var INFLUX_PORT $from)
-INFLUX_COLLECTION=$(read_var INFLUX_COLLECTION $from)
+INFLUXDB_HOST=$(read_var INFLUXDB_HOST $from)
+INFLUXDB_PORT=$(read_var INFLUXDB_PORT $from)
+INFLUXDB_DB=$(read_var INFLUXDB_DB $from)
 INFLUX_ADMIN_ENABLED=$(read_var INFLUX_ADMIN_ENABLED $from)
 INFLUX_ADMIN_USER=$(read_var INFLUX_ADMIN_USER $from)
 INFLUX_ADMIN_PASSWORD=$(read_var INFLUX_ADMIN_PASSWORD $from)
-INFLUX_USER=$(read_var INFLUX_USER $from)
-INFLUX_PASS=$(read_var INFLUX_PASS $from)
+INFLUXDB_USER=$(read_var INFLUXDB_USER $from)
+INFLUXDB_USER_PASSWORD=$(read_var INFLUXDB_USER_PASSWORD $from)
 # OPEN CAGE CONFIG
 OCD_API_KEY=$(read_var OCD_API_KEY $from)
 # TIMER CONFIG
@@ -276,20 +280,21 @@ create_env() {
         cp $config $config_tmp
         from_env=1
         local key_exists=$(check_env ALOES_ID $config_tmp)
-        if  [ $key_exists != "0" ]; then
-          ALOES_ID=$(read_var ALOES_ID $config_tmp)
-        else
+        if [ -z "$key_exists" ]; then
           ALOES_ID=$(get_uuid)
           set_env ALOES_ID $ALOES_ID $config_tmp
+        else
+          ALOES_ID=$(read_var ALOES_ID $config_tmp)
         fi
 
-        key_exists=$(check_env ALOES_ID $config_tmp)
-        if  [ key_exists != "0" ]; then
-          ALOES_KEY=$(read_var ALOES_KEY $config_tmp)
-        else
+        key_exists=$(check_env ALOES_KEY $config_tmp)
+        if [ -z "$key_exists" ]; then
           ALOES_KEY=$(get_uuid)
           set_env ALOES_KEY $ALOES_KEY $config_tmp
+        else
+          ALOES_KEY=$(read_var ALOES_KEY $config_tmp)
         fi
+
         # del_env NODE_ENV $config_tmp
       else
         ALOES_ID=$(get_uuid)
@@ -305,12 +310,23 @@ create_env() {
   # set_env NODE_ENV $NODE_ENV $config_tmp
   local env_keys
 
-  read -p "Would you like to configure Aloes API ? (y/N) " answer
+  read -p "Would you like to configure Aloes REST and Async API ? (y/N) " answer
   if [ "$answer" == "Y" ] || [ "$answer" == "y" ]; then
     # INSTANCES_COUNT=1
     # INSTANCES_PREFIX=
     env_keys=(NODE_ENV APP_NAME HTTP_SERVER_PORT MQTT_BROKER_PORT HTTP_TRUST_PROXY WS_BROKER_PORT 
       MQTT_TRUST_PROXY REST_API_ROOT SERVER_LOGGER_LEVEL ADMIN_EMAIL)
+    for env_key in "${env_keys[@]}"; do
+      get_value_from_user $env_key $config_tmp $from_env
+      set_env $env_key $USER_VAL $config_tmp
+    done
+  fi
+
+  read -p "Would you like to configure Aloes GraphQL API ? (y/N) " answer
+  if [ "$answer" == "Y" ] || [ "$answer" == "y" ]; then
+    # INSTANCES_COUNT=1
+    # INSTANCES_PREFIX=
+    env_keys=(GRAPHQL_SERVER_PATH GRAPHQL_HTTP_SERVER_PORT GRAPHQL_WS_SERVER_PORT)
     for env_key in "${env_keys[@]}"; do
       get_value_from_user $env_key $config_tmp $from_env
       set_env $env_key $USER_VAL $config_tmp
@@ -383,7 +399,7 @@ create_env() {
     done
   fi
 
- read -p "Would you like to configure Redis container ? (y/N) " answer
+  read -p "Would you like to configure Redis container ? (y/N) " answer
   if [ "$answer" == "Y" ] || [ "$answer" == "y" ]; then
     env_keys=(REDIS_HOST REDIS_PORT REDIS_PASS REDIS_MQTT_PERSISTENCE REDIS_MQTT_EVENTS REDIS_COLLECTIONS)
     for env_key in "${env_keys[@]}"; do
@@ -392,17 +408,17 @@ create_env() {
     done
   fi
 
- read -p "Would you like to configure InfluxDB container ? (y/N) " answer
+  read -p "Would you like to configure InfluxDB container ? (y/N) " answer
   if [ "$answer" == "Y" ] || [ "$answer" == "y" ]; then
-    env_keys=(INFLUX_HOST INFLUX_PORT INFLUX_COLLECTION INFLUX_ADMIN_ENABLED INFLUX_ADMIN_USER 
-      INFLUX_ADMIN_PASSWORD INFLUX_USER INFLUX_PASS)
+    env_keys=(INFLUXDB_HOST INFLUXDB_PORT INFLUXDB_DB INFLUX_ADMIN_ENABLED INFLUX_ADMIN_USER 
+      INFLUX_ADMIN_PASSWORD INFLUXDB_USER INFLUXDB_USER_PASSWORD)
     for env_key in "${env_keys[@]}"; do
       get_value_from_user $env_key $config_tmp $from_env
       set_env $env_key $USER_VAL $config_tmp
     done
   fi
 
- read -p "Would you like to configure SMTP email provider ? (y/N) " answer
+  read -p "Would you like to configure SMTP email provider ? (y/N) " answer
   if [ "$answer" == "Y" ] || [ "$answer" == "y" ]; then
     env_keys=(SMTP_HOST SMTP_PORT SMTP_SECURE SMTP_USER SMTP_PASS)
     for env_key in "${env_keys[@]}"; do
@@ -411,7 +427,7 @@ create_env() {
     done
   fi
 
- read -p "Would you like to configure OpenCageAPI key ? (y/N) " answer
+  read -p "Would you like to configure OpenCageAPI key ? (y/N) " answer
   if [ "$answer" == "Y" ] || [ "$answer" == "y" ]; then
     env_keys=(OCD_API_KEY)
     for env_key in "${env_keys[@]}"; do
