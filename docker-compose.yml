@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with Aloes-docker. If not, see <https://www.gnu.org/licenses/>.
 
-version: '3.7'
+version: "3.7"
 
 networks:
   skyring:
@@ -41,12 +41,12 @@ services:
 
   influxdb:
     environment:
-      - INFLUXDB_DB=${INFLUX_COLLECTION}
+      - INFLUXDB_DB=${INFLUXDB_DB}
       - INFLUXDB_ADMIN_ENABLED=${INFLUX_ADMIN_ENABLED}
       - INFLUXDB_ADMIN_USER=${INFLUX_ADMIN_USER}
       - INFLUXDB_ADMIN_PASSWORD=${INFLUX_ADMIN_PASSWORD}
-      - INFLUXDB_USER=${INFLUX_USER}
-      - INFLUXDB_USER_PASSWORD=${INFLUX_PASS}
+      - INFLUXDB_USER=${INFLUXDB_USER}
+      - INFLUXDB_USER_PASSWORD=${INFLUXDB_USER_PASSWORD}
       - INFLUXDB_REPORTING_DISABLED=true
       - INFLUXDB_BIND_ADDRESS=127.0.0.1:8088
     image: influxdb:1.7-alpine
@@ -64,12 +64,13 @@ services:
       - ./config/redis/redis.conf:/usr/local/etc/redis/redis.conf
     networks:
       - aloes
-    command: ['redis-server', '/usr/local/etc/redis/redis.conf']
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
 
   timer-1:
-    build:
-      context: https://github.com/esatterwhite/skyring.git#master
-    image: aloes/timer-api:latest
+    # build:
+    #   context: https://github.com/esatterwhite/skyring.git#master
+    # image: aloes/timer-api:latest
+    image: quay.io/esatterwhite/skyring
     hostname: timer-1
     restart: always
     environment:
@@ -87,9 +88,7 @@ services:
       - nats-c
 
   timer-2:
-    build:
-      context: https://github.com/esatterwhite/skyring.git#master
-    image: aloes/timer-api:latest
+    image: quay.io/esatterwhite/skyring
     hostname: timer-2
     restart: always
     environment:
@@ -108,9 +107,7 @@ services:
       - nats-c
 
   timer-3:
-    build:
-      context: https://github.com/esatterwhite/skyring.git#master
-    image: aloes/timer-api:latest
+    image: quay.io/esatterwhite/skyring
     hostname: timer-3
     restart: always
     environment:
@@ -130,9 +127,7 @@ services:
       - timer-2
 
   timer-4:
-    build:
-      context: https://github.com/esatterwhite/skyring.git#master
-    image: aloes/timer-api:latest
+    image: quay.io/esatterwhite/skyring
     hostname: timer-4
     restart: always
     environment:
@@ -152,9 +147,7 @@ services:
       - timer-2
 
   timer-5:
-    build:
-      context: https://github.com/esatterwhite/skyring.git#master
-    image: aloes/timer-api:latest
+    image: quay.io/esatterwhite/skyring
     hostname: timer-5
     restart: always
     environment:
@@ -223,17 +216,14 @@ services:
       - timer-4
       - timer-5
 
-  mqtt-api-1:
-    hostname: mqtt-api-1
+  async-api-1:
+    image: getlarge/aloes-async-api:latest
+    hostname: async-api-1
     env_file: ./config/device-manager/.env
     environment:
       - SERVER_LOGGER_LEVEL=4
       - HTTP_INSTANCES_COUNT=6
       - MQTT_INSTANCES_COUNT=2
-    build:
-      context: https://framagit.org/aloes/device-manager.git#master
-      dockerfile: ./config/docker/broker.dockerfile
-    image: aloes/mqtt-api:latest
     volumes:
       - ./config/device-manager/.env:/home/node/device-manager/.env:ro
     restart: always
@@ -242,27 +232,26 @@ services:
     networks:
       - aloes
 
-  mqtt-api-2:
-    hostname: mqtt-api-2
+  async-api-2:
+    image: getlarge/aloes-async-api:latest
+    hostname: async-api-2
     env_file: ./config/device-manager/.env
     environment:
       - SERVER_LOGGER_LEVEL=4
       - HTTP_INSTANCES_COUNT=6
       - MQTT_INSTANCES_COUNT=2
-    build:
-      context: https://framagit.org/aloes/device-manager.git#master
-      dockerfile: ./config/docker/broker.dockerfile
-    image: aloes/mqtt-api:latest
     volumes:
       - ./config/device-manager/.env:/home/node/device-manager/.env:ro
     restart: always
     depends_on:
       - redis
-      - mqtt-api-1
+      - async-api-1
     networks:
       - aloes
 
-  http-api-1:
+  rest-api-1:
+    image: getlarge/aloes-rest-api:latest
+    hostname: rest-api-1
     env_file: ./config/device-manager/.env
     environment:
       - SERVER_LOGGER_LEVEL=4
@@ -270,10 +259,6 @@ services:
       - INSTANCES_PREFIX=1
       - HTTP_INSTANCES_COUNT=6
       - MQTT_INSTANCES_COUNT=2
-    build:
-      context: https://framagit.org/aloes/device-manager.git#master
-      dockerfile: ./config/docker/server.dockerfile
-    image: aloes/http-api:latest
     restart: always
     volumes:
       - ./config/device-manager/.env:/home/node/device-manager/.env:ro
@@ -283,12 +268,14 @@ services:
       - influxdb
       - redis
       - timer-proxy
-      - mqtt-api-1
-      - mqtt-api-2
+      - async-api-1
+      - async-api-2
     networks:
       - aloes
 
-  http-api-2:
+  rest-api-2:
+    image: getlarge/aloes-rest-api:latest
+    hostname: rest-api-2
     env_file: ./config/device-manager/.env
     environment:
       - SERVER_LOGGER_LEVEL=4
@@ -296,10 +283,6 @@ services:
       - INSTANCES_PREFIX=2
       - HTTP_INSTANCES_COUNT=6
       - MQTT_INSTANCES_COUNT=2
-    build:
-      context: https://framagit.org/aloes/device-manager.git#master
-      dockerfile: ./config/docker/server.dockerfile
-    image: aloes/http-api:latest
     restart: always
     volumes:
       - ./config/device-manager/.env:/home/node/device-manager/.env:ro
@@ -309,13 +292,15 @@ services:
       - influxdb
       - redis
       - timer-proxy
-      - mqtt-api-1
-      - mqtt-api-2
-      - http-api-1
+      - async-api-1
+      - async-api-2
+      - rest-api-1
     networks:
       - aloes
 
-  http-api-3:
+  rest-api-3:
+    image: getlarge/aloes-rest-api:latest
+    hostname: rest-api-3
     env_file: ./config/device-manager/.env
     environment:
       - SERVER_LOGGER_LEVEL=4
@@ -323,10 +308,6 @@ services:
       - INSTANCES_PREFIX=3
       - HTTP_INSTANCES_COUNT=6
       - MQTT_INSTANCES_COUNT=2
-    build:
-      context: https://framagit.org/aloes/device-manager.git#master
-      dockerfile: ./config/docker/server.dockerfile
-    image: aloes/http-api:latest
     restart: always
     volumes:
       - ./config/device-manager/.env:/home/node/device-manager/.env:ro
@@ -336,15 +317,41 @@ services:
       - influxdb
       - redis
       - timer-proxy
-      - mqtt-api-1
-      - mqtt-api-2
-      - http-api-1
-      - http-api-2
+      - async-api-1
+      - async-api-2
+      - rest-api-1
+      - rest-api-2
+    networks:
+      - aloes
+
+  graphql-api:
+    image: getlarge/aloes-graphql-api:latest
+    environment:
+      - ALOES_ID=${ALOES_ID}
+      - ALOES_KEY=${ALOES_KEY}
+      # - HTTP_SERVER_HOST=127.0.0.1
+      - HTTP_SERVER_PORT=${GRAPHQL_HTTP_SERVER_PORT}
+      # - WS_SERVER_HOST=127.0.0.1
+      - WS_SERVER_PORT=${GRAPHQL_WS_SERVER_PORT}
+      - GRAPHQL_PATH=${GRAPHQL_SERVER_PATH}
+      - ALOES_SERVER_URL=${PROXY_HTTP_SERVER_URL}
+      - ALOES_SERVER_API_ROOT=${REST_API_ROOT}
+      - ALOES_BROKER_SCHEME=mqtt
+      - ALOES_BROKER_URL=${PROXY_MQTT_BROKER_URL}
+    restart: always
+    depends_on:
+      - async-api-1
+      - async-api-2
+      - rest-api-1
+      - rest-api-2
+      - rest-api-3
     networks:
       - aloes
 
   client:
+    image: getlarge/aloes-client:latest
     environment:
+      - PORT=8080
       - VUE_APP_NAME=${APP_NAME}
       - VUE_APP_ROOT_API=${REST_API_ROOT}
       - VUE_APP_DOMAIN=${PROXY_SERVER_HOST}
@@ -353,25 +360,12 @@ services:
       - VUE_APP_CLIENT_URL=${VUE_APP_CLIENT_URL}
       - VUE_APP_LOGGER_LEVEL=4
       - GIT_REPO_SSH_URL=git@framagit.org:aloes/aloes-client.git
-    build:
-      context: https://framagit.org/aloes/aloes-client.git#master
-      dockerfile: Dockerfile
-      args:
-        - VUE_APP_NAME=${APP_NAME}
-        - VUE_APP_ROOT_API=${REST_API_ROOT}
-        - VUE_APP_DOMAIN=${PROXY_SERVER_HOST}
-        - VUE_APP_SERVER_URL=${VUE_APP_SERVER_URL}
-        - VUE_APP_BROKER_URL=${VUE_APP_BROKER_URL}
-        - VUE_APP_CLIENT_URL=${VUE_APP_CLIENT_URL}
-        - VUE_APP_LOGGER_LEVEL=4
-        - GIT_REPO_SSH_URL=git@framagit.org:aloes/aloes-client.git
-    image: aloes/aloes-client:latest
     depends_on:
-      - mqtt-api-1
-      - mqtt-api-2
-      - http-api-1
-      - http-api-2
-      - http-api-3
+      - async-api-1
+      - async-api-2
+      - rest-api-1
+      - rest-api-2
+      - rest-api-3
     networks:
       - aloes
 
@@ -388,6 +382,9 @@ services:
       - WS_BROKER_PORT=${WS_BROKER_PORT}
       - MQTT_BROKER_PORT=${MQTT_BROKER_PORT}
       - HTTP_SERVER_PORT=${HTTP_SERVER_PORT}
+      - GRAPHQL_HTTP_SERVER_PORT=${GRAPHQL_HTTP_SERVER_PORT}
+      - GRAPHQL_WS_SERVER_PORT=${GRAPHQL_WS_SERVER_PORT}
+      - GRAPHQL_PATH=${GRAPHQL_SERVER_PATH}
       - PROXY_HTTP_SERVER_PORT=${PROXY_HTTP_SERVER_PORT}
       - PROXY_HTTPS_SERVER_PORT=${PROXY_HTTPS_SERVER_PORT}
       - PROXY_MQTT_BROKER_PORT=${PROXY_MQTT_BROKER_PORT}
@@ -406,17 +403,18 @@ services:
       - ./config/certbot/www:/var/www/certbot
       - ./config/certbot/conf:/etc/letsencrypt
     depends_on:
-      - mqtt-api-1
-      - mqtt-api-2
-      - http-api-1
-      - http-api-2
-      - http-api-3
+      - async-api-1
+      - async-api-2
+      - rest-api-1
+      - rest-api-2
+      - rest-api-3
+      - graphql-api
       - client
       - timer-proxy
       - certbot
     ports:
-      - '${PROXY_HTTP_SERVER_PORT}:${PROXY_HTTP_SERVER_PORT}'
-      - '${PROXY_MQTT_BROKER_PORT}:${PROXY_MQTT_BROKER_PORT}'
+      - "${PROXY_HTTP_SERVER_PORT}:${PROXY_HTTP_SERVER_PORT}"
+      - "${PROXY_MQTT_BROKER_PORT}:${PROXY_MQTT_BROKER_PORT}"
       # - '${PROXY_HTTPS_SERVER_PORT}:${PROXY_HTTPS_SERVER_PORT}'
       # - '${PROXY_MQTTS_BROKER_PORT}:${PROXY_MQTTS_BROKER_PORT}'
     networks:

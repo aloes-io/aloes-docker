@@ -60,7 +60,6 @@ check_env() {
   local key_exists=""
   grep -q -i "$current_key=" "$env_file"
   if  [ $? == 0 ]; then
-    # current_value=$(read_var $current_key $env_file)
     if [ -z "$(read_var $current_key $env_file)" ]; then
       key_exists=""
     else
@@ -68,7 +67,6 @@ check_env() {
     fi
   fi
   
-  # echo "$current_value"
   echo "$key_exists"
 }
 
