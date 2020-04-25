@@ -4,6 +4,9 @@ worker_processes 8;
 
 events { 
   worker_connections 2048; 
+  # https://itnext.io/how-we-manage-live-1m-graphql-websocket-subscriptions-11e1880758b0
+  use epoll;
+  multi_accept on;
 }
 
 # merge_slashes off;
@@ -36,19 +39,36 @@ http {
 
   upstream aloes_http_api_servers {
     least_conn;
-    server http-api-1:${HTTP_SERVER_PORT} max_fails=3 fail_timeout=15s;
-    server http-api-2:${HTTP_SERVER_PORT};
-    server http-api-3:${HTTP_SERVER_PORT};
+    server rest-api-1:${HTTP_SERVER_PORT} max_fails=3 fail_timeout=15s;
+    server rest-api-2:${HTTP_SERVER_PORT};
+    server rest-api-3:${HTTP_SERVER_PORT};
   }
 
   upstream aloes_ws_api_servers {
     least_conn;
-    server mqtt-api-1:${WS_BROKER_PORT};
-    server mqtt-api-2:${WS_BROKER_PORT};
+    server async-api-1:${WS_BROKER_PORT};
+    server async-api-2:${WS_BROKER_PORT};
+  }
+
+  upstream aloes_graphql_http_api_servers {
+    least_conn;
+    # server graphql-api:${GRAPHQL_HTTP_SERVER_PORT}/${GRAPHQL_SERVER_PATH};
+    server graphql-api:${GRAPHQL_HTTP_SERVER_PORT};
+  }
+
+  upstream aloes_graphql_ws_api_servers {
+    least_conn;
+    # server graphql-api:${GRAPHQL_WS_SERVER_PORT}/${GRAPHQL_SERVER_PATH};
+    server graphql-api:${GRAPHQL_WS_SERVER_PORT};
   }
 
   upstream timer_load_balancers {
     server timer-proxy:80;
+  }
+
+  upstream aloes_http_client_servers {
+    least_conn;
+    server client:8080;
   }
 
   log_format custom_combined '$server_addr - $remote_addr [$time_local] "$request" $status $body_bytes_sent $upstream_addr "$http_referer" "$http_user_agent"';
@@ -86,9 +106,14 @@ http {
       # fix double slashed urls
       # rewrite (.*)//+(.*) $1/$2 break;
 
-      root   /etc/nginx/html;
-      index  index.html index.htm;
-      try_files $uri $uri/ /index.html;
+      proxy_pass http://aloes_http_client_servers;
+      proxy_redirect off;
+      proxy_http_version 1.1;
+      proxy_read_timeout 90;
+      
+      # root   /etc/nginx/html;
+      # index  index.html index.htm;
+      # try_files $uri $uri/ /index.html;
       expires $expires;
       gzip_static on;
     }
@@ -108,6 +133,30 @@ http {
       proxy_redirect off;
       proxy_http_version 1.1;
       proxy_read_timeout 90;
+      # proxy_read_timeout 999950s; 
+      proxy_set_header Upgrade $http_upgrade;
+      proxy_set_header Connection $connection_upgrade;
+      proxy_set_header Host $http_host;
+      proxy_set_header X-Scheme $scheme;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+
+    location /graphql {
+      proxy_pass http://aloes_graphql_http_api_servers/graphql;
+      proxy_redirect off;
+      proxy_http_version 1.1;
+      proxy_read_timeout 90;
+      proxy_set_header Host $http_host;
+      proxy_set_header X-Scheme $scheme;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+    
+    location /subscription {
+      proxy_pass http://aloes_graphql_ws_api_servers/graphql;
+      proxy_redirect off;
+      proxy_http_version 1.1;
+      proxy_read_timeout 90;
+      # proxy_read_timeout 999950s; 
       proxy_set_header Upgrade $http_upgrade;
       proxy_set_header Connection $connection_upgrade;
       proxy_set_header Host $http_host;
@@ -147,8 +196,8 @@ stream {
 
   upstream aloes_mqtt_api_servers {
     least_conn;
-    server mqtt-api-1:${MQTT_BROKER_PORT};
-    server mqtt-api-2:${MQTT_BROKER_PORT};
+    server async-api-1:${MQTT_BROKER_PORT};
+    server async-api-2:${MQTT_BROKER_PORT};
   }
 
   server {
@@ -159,6 +208,7 @@ stream {
     proxy_protocol on;
     proxy_connect_timeout 5s;
     proxy_timeout 60s;
+    # proxy_read_timeout 999950s; 
   }
 
 }
