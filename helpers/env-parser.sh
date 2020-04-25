@@ -32,8 +32,8 @@ read_var() {
     ENV_FILE="$2"
   fi
 
-  # local VAR=$(grep "^$1=" $ENV_FILE | xargs)
-  local VAR=$(grep "^$1=" $ENV_FILE | xargs -d '\n')
+  local VAR=$(grep "^$1=" $ENV_FILE | gxargs -d '\n')
+  # local VAR=$(grep "^$1=" $ENV_FILE | xargs -d '\n')
   IFS="=" read -ra VAR <<< "$VAR"
   IFS=" "
   # if is_comment "$VAR"; then
@@ -57,11 +57,15 @@ check_env() {
     env_file="$(pwd)/.env"
   fi
 
-  local key_exists=0
+  local key_exists=""
   grep -q -i "$current_key=" "$env_file"
   if  [ $? == 0 ]; then
-    key_exists=1
     # current_value=$(read_var $current_key $env_file)
+    if [ -z "$(read_var $current_key $env_file)" ]; then
+      key_exists=""
+    else
+      key_exists=1
+    fi
   fi
   
   # echo "$current_value"
@@ -73,16 +77,21 @@ set_env() {
     echo "Environment variable name is required"
     exit 1
   fi
+  if [ -z "$2" ]; then
+    echo "Environment variable value is required"
+    exit 1
+  fi
+
   local current_key=$1
   local current_value=$2
-  if [ -z "$2" ]; then
-    # echo "Environment variable value is required"
-    # exit 1
-    current_value=""
-  fi
   local env_file=$3
   if [ -z "$3" ]; then
     env_file="$(pwd)/.env"
+  fi
+
+  grep -q -n "$current_key=" $env_file
+  if  [ $? == 0 ]; then
+    del_env $current_key $env_file
   fi
 
   echo "$current_key=$current_value" >> "$env_file"
@@ -95,11 +104,10 @@ del_env() {
   fi
 
   local current_key=$1
-  local match=/$current_key=/d
   local env_file=$2
   if [ -z "$2" ]; then
     env_file="$(pwd)/.env"
   fi
 
-  sed -i $match $env_file
+  sed -i '' "/$current_key=/d" $env_file
 }

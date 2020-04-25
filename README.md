@@ -6,11 +6,9 @@ Compose every dependencies needed to get a fully working Aloes network
 
 [Docs](https://docs.docker.com/install/linux/docker-ce/ubuntu/)
 
-
 ## Install docker-compose
 
 [Docs](https://docs.docker.com/compose/install/)
-
 
 ## Run as non-root user
 
@@ -24,24 +22,20 @@ sudo usermod -aG docker <non-root user>
 ```bash
 sudo systemctl enable docker.service
 ```
+
 ## Solve "real" ip issues
 
 Many developers using nginx inside docker uncountered this [issue](https://github.com/jwilder/nginx-proxy/issues/133)
 
 Update hosts file to point your servername to the loopback network ( not sure it helped ).
 
-
 ## Setup
 
 Manually :
 
-- Create `.env` at root 
+- Create `.env` at root
 
 - Create `.env.local` and/or `.env` in `./config/device-manager/`
-
-- Create `.env.local` and/or `.env` in `./config/mongo/`
-
-- Create `.env.local` and/or `.env` in `./config/influxdb/`
 
 or using helper :
 
@@ -85,6 +79,16 @@ chmod a+x ./config/influx/influxrestore.sh
 ./config/influx/influxrestore.sh -d aloes_test -db aloes_test -c aloes-docker_influxdb_1 -u aloes -p example
 ```
 
+## Backup and restore Redis
+
+```bash
+chmod a+x ./config/redis/redisdump.sh
+./config/redis/redisdump.sh -c aloes-docker_redis_1 -d /data
+
+chmod a+x ./config/redis/redisrestore.sh
+./config/influx/redisrestore.sh -s ./dump_file -c aloes-docker_redis_1 -d /data
+```
+
 ## Display config
 
 ```bash
@@ -92,6 +96,7 @@ docker-compose config
 
 docker-compose -f docker-compose.yml config
 ```
+
 or using helper :
 
 ```bash
@@ -103,14 +108,15 @@ or using helper :
 ## Build
 
 ```bash
-docker-compose --compatibility build 
+docker-compose --compatibility build
 
-docker-compose --compatibility -f docker-compose.yml build 
+docker-compose --compatibility -f docker-compose.yml build
 
 docker-compose  -f docker-compose.yml build <service_name>
 
 docker-compose  -f docker-compose.yml --no-deps --build <service_name> up
 ```
+
 or using helper :
 
 ```bash
@@ -124,12 +130,13 @@ or using helper :
 ## Start
 
 ```bash
-docker-compose --compatibility up 
+docker-compose --compatibility up
 
 docker-compose --compatibility up -d
 
 docker-compose --compatibility -f docker-compose.yml up -d
 ```
+
 or using helper :
 
 ```bash
@@ -140,7 +147,6 @@ or using helper :
 ./aloes.sh -c start -e local -s <service_name>
 ```
 
-
 ## Stop
 
 ```bash
@@ -148,6 +154,7 @@ docker-compose --compatibility down
 
 docker-compose -f docker-compose.yml down
 ```
+
 or using helper :
 
 ```bash
@@ -158,7 +165,6 @@ or using helper :
 ./aloes.sh -c stop -e local -s <service_name>
 ```
 
-
 ## Monitor
 
 ```bash
@@ -166,6 +172,7 @@ docker-compose --compatibility logs --follow --tail="100"
 
 docker-compose --compatibility -f docker-compose.yml logs --follow --tail="100"
 ```
+
 or using helper :
 
 ```bash
@@ -176,6 +183,15 @@ or using helper :
 ./aloes.sh -c log -e local -s proxy
 ```
 
+## Tips
+
+On Mac OS in order to use envsubst, one step is required :
+
+```bash
+brew install gettext
+brew link --force gettext 
+```
+
 ## TODO
 
 - Replicate Mongo and Redis servers
@@ -183,4 +199,3 @@ or using helper :
 - Use docker swarm to deploy on several machines
 
 - Use aloes.sh to configure dynamically docker-compose services ?
-

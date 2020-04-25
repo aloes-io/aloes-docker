@@ -37,7 +37,8 @@ get_mac_address() {
 	local mac_address
 	local interface
 	if [ -z "$1" ]; then
-		interface=eth0
+		# interface=eth0
+		interface=en1
 	else 
 		interface=$1
 	fi
@@ -50,6 +51,8 @@ get_mac_address() {
 		mac_address=$(cat /sys/class/net/wlan0/address)
 	elif [ -f "/sys/class/net/wlp2s0/address" ]; then
 		mac_address=$(cat /sys/class/net/wlp2s0/address)
+	else
+		mac_address=$(ifconfig $interface | awk '/ether/{print $2}')
 	fi
 
 	echo $mac_address
@@ -61,6 +64,8 @@ get_uuid() {
 	if [[ -z "$mac_address" ]]; then 
 		echo "No MAC address retrieved"
 		exit 1
+	elif [ -x "$(command -v uuidgen)" ]; then
+		uuid=$(uuidgen)
 	else 
 		uuid=$(generate 4 $mac_address)
 	fi
@@ -95,7 +100,7 @@ is_valid_command() {
 
 # if no argument passed, prompt user to get command and environment
 if [ -z "$1" ]; then
-	echo "Type the command you want to execute (build|start|stop|log), followed by [ENTER]:"
+	echo "Type the command you want to execute (create|build|start|stop|log), followed by [ENTER]:"
 	read CMD
 	if is_valid_command "$CMD"; then
     echo "Type the environment used to execute $CMD (local|production), followed by [ENTER]:"
