@@ -67,9 +67,6 @@ services:
     command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
 
   timer-1:
-    # build:
-    #   context: https://github.com/esatterwhite/skyring.git#master
-    # image: aloes/timer-api:latest
     image: quay.io/esatterwhite/skyring
     hostname: timer-1
     restart: always
@@ -219,11 +216,10 @@ services:
   async-api-1:
     image: getlarge/aloes-async-api:latest
     hostname: async-api-1
+    container_name: async-api-1
     env_file: ./config/device-manager/.env
     environment:
       - SERVER_LOGGER_LEVEL=4
-      - HTTP_INSTANCES_COUNT=6
-      - MQTT_INSTANCES_COUNT=2
     volumes:
       - ./config/device-manager/.env:/home/node/device-manager/.env:ro
     restart: always
@@ -235,11 +231,10 @@ services:
   async-api-2:
     image: getlarge/aloes-async-api:latest
     hostname: async-api-2
+    container_name: async-api-2
     env_file: ./config/device-manager/.env
     environment:
       - SERVER_LOGGER_LEVEL=4
-      - HTTP_INSTANCES_COUNT=6
-      - MQTT_INSTANCES_COUNT=2
     volumes:
       - ./config/device-manager/.env:/home/node/device-manager/.env:ro
     restart: always
@@ -252,13 +247,14 @@ services:
   rest-api-1:
     image: getlarge/aloes-rest-api:latest
     hostname: rest-api-1
+    container_name: rest-api-1
     env_file: ./config/device-manager/.env
     environment:
       - SERVER_LOGGER_LEVEL=4
       - INSTANCES_COUNT=2
       - INSTANCES_PREFIX=1
-      - HTTP_INSTANCES_COUNT=6
-      - MQTT_INSTANCES_COUNT=2
+      # - HTTP_INSTANCES_COUNT=6
+      # - MQTT_INSTANCES_COUNT=2
     restart: always
     volumes:
       - ./config/device-manager/.env:/home/node/device-manager/.env:ro
@@ -276,13 +272,12 @@ services:
   rest-api-2:
     image: getlarge/aloes-rest-api:latest
     hostname: rest-api-2
+    container_name: rest-api-2
     env_file: ./config/device-manager/.env
     environment:
       - SERVER_LOGGER_LEVEL=4
       - INSTANCES_COUNT=2
       - INSTANCES_PREFIX=2
-      - HTTP_INSTANCES_COUNT=6
-      - MQTT_INSTANCES_COUNT=2
     restart: always
     volumes:
       - ./config/device-manager/.env:/home/node/device-manager/.env:ro
@@ -301,13 +296,12 @@ services:
   rest-api-3:
     image: getlarge/aloes-rest-api:latest
     hostname: rest-api-3
+    container_name: rest-api-3
     env_file: ./config/device-manager/.env
     environment:
       - SERVER_LOGGER_LEVEL=4
       - INSTANCES_COUNT=2
       - INSTANCES_PREFIX=3
-      - HTTP_INSTANCES_COUNT=6
-      - MQTT_INSTANCES_COUNT=2
     restart: always
     volumes:
       - ./config/device-manager/.env:/home/node/device-manager/.env:ro
@@ -326,19 +320,22 @@ services:
 
   graphql-api:
     image: getlarge/aloes-graphql-api:latest
-    environment:
-      - ALOES_ID=${ALOES_ID}
-      - ALOES_KEY=${ALOES_KEY}
-      # - HTTP_SERVER_HOST=127.0.0.1
-      - HTTP_SERVER_PORT=${GRAPHQL_HTTP_SERVER_PORT}
-      # - WS_SERVER_HOST=127.0.0.1
-      - WS_SERVER_PORT=${GRAPHQL_WS_SERVER_PORT}
-      - GRAPHQL_PATH=${GRAPHQL_SERVER_PATH}
-      - ALOES_SERVER_URL=${PROXY_HTTP_SERVER_URL}
-      - ALOES_SERVER_API_ROOT=${REST_API_ROOT}
-      - ALOES_BROKER_SCHEME=mqtt
-      - ALOES_BROKER_URL=${PROXY_MQTT_BROKER_URL}
+    hostname: graphql-api
+    container_name: graphql-api
+    env_file: ./config/device-manager-graphql/.env
+    # environment:
+    #   - ALOES_ID=${ALOES_ID}
+    #   - ALOES_KEY=${ALOES_KEY}
+    #   - HTTP_SERVER_PORT=${GRAPHQL_HTTP_SERVER_PORT}
+    #   - WS_SERVER_PORT=${GRAPHQL_WS_SERVER_PORT}
+    #   - GRAPHQL_PATH=${GRAPHQL_SERVER_PATH}
+    #   - ALOES_SERVER_URL=${PROXY_HTTP_SERVER_URL}
+    #   - ALOES_SERVER_API_ROOT=${REST_API_ROOT}
+    #   - ALOES_BROKER_URL=${PROXY_MQTT_BROKER_URL}
+    #   # - ALOES_BROKER_URL=${PROXY_WS_BROKER_URL}
     restart: always
+    volumes:
+      - ./config/device-manager-graphql/.env:/home/node/app/.env:ro
     depends_on:
       - async-api-1
       - async-api-2
@@ -350,14 +347,16 @@ services:
 
   client:
     image: getlarge/aloes-client:latest
+    hostname: client
+    container_name: client
     environment:
       - PORT=8080
       - VUE_APP_NAME=${APP_NAME}
       - VUE_APP_ROOT_API=${REST_API_ROOT}
       - VUE_APP_DOMAIN=${PROXY_SERVER_HOST}
-      - VUE_APP_SERVER_URL=${VUE_APP_SERVER_URL}
-      - VUE_APP_BROKER_URL=${VUE_APP_BROKER_URL}
-      - VUE_APP_CLIENT_URL=${VUE_APP_CLIENT_URL}
+      - VUE_APP_SERVER_URL=${PROXY_HTTP_SERVER_URL}
+      - VUE_APP_BROKER_URL=${PROXY_WS_BROKER_URL}
+      - VUE_APP_CLIENT_URL=${PROXY_HTTP_CLIENT_URL}
       - VUE_APP_LOGGER_LEVEL=4
       - GIT_REPO_SSH_URL=git@framagit.org:aloes/aloes-client.git
     depends_on:
@@ -378,6 +377,8 @@ services:
     entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
 
   aloes-lb-1:
+    hostname: aloes-lb-1
+    container_name: aloes-lb-1
     environment:
       - WS_BROKER_PORT=${WS_BROKER_PORT}
       - MQTT_BROKER_PORT=${MQTT_BROKER_PORT}

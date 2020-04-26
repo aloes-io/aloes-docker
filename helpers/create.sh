@@ -139,6 +139,46 @@ INSTANCES_COUNT=1" >> "$aloes_config"
   # $${PROXY_MQTT_BROKER_PORT},$${PROXY_MQTT_BROKER_URL},$${PROXY_MQTTS_BROKER_PORT},$${PROXY_MQTTS_BROKER_URL}' <  "$(pwd)/.env.template" > "$to" 
 # }
 
+create_device_manager_graphql_env() {
+  if [ -z "$1" ]; then
+    echo "Config file name is required"
+    exit 1
+  fi
+  local config=$1
+  
+  local ENV=$2
+  local ALOES_SERVER_URL
+  local ALOES_BROKER_URL
+  if [ "$ENV" == "production" ]; then
+    ALOES_SERVER_URL=$(read_var PROXY_HTTPS_SERVER_URL $config)
+    ALOES_BROKER_URL=$(read_var PROXY_MQTTS_BROKER_URL $config)
+    # ALOES_BROKER_URL=$(read_var PROXY_WSS_BROKER_URL $config)
+  else
+    ALOES_SERVER_URL=$(read_var PROXY_HTTP_SERVER_URL $config)
+    ALOES_BROKER_URL=$(read_var PROXY_MQTT_BROKER_URL $config)
+    # ALOES_BROKER_URL=$(read_var PROXY_WS_BROKER_URL $config)
+  fi
+
+  local aloes_config="$(pwd)/config/device-manager-graphql/.env"
+  if [ -f "$aloes_config" ]; then
+    rm $aloes_config
+  fi
+
+  echo "NODE_ENV=$(read_var NODE_ENV $config)
+NODE_NAME=$(read_var APP_NAME $config)
+ALOES_ID=$(read_var ALOES_ID $config)
+ALOES_KEY=$(read_var ALOES_KEY $config)
+ALOES_SERVER_URL=$ALOES_SERVER_URL
+ALOES_BROKER_URL=$ALOES_BROKER_URL
+ALOES_SERVER_API_ROOT=$(read_var REST_API_ROOT $config)
+HTTP_SERVER_HOST=0.0.0.0
+HTTP_SERVER_PORT=$(read_var GRAPHQL_HTTP_SERVER_PORT $config)
+WS_SERVER_HOST=0.0.0.0
+WS_SERVER_PORT=$(read_var GRAPHQL_WS_SERVER_PORT $config)
+GRAPHQL_PATH=$(read_var GRAPHQL_SERVER_PATH $config)" >> "$aloes_config"
+
+}
+
 replicate_env() {
   if [ -z "$1" ] || [ -z "$2" ]; then
     echo "Config filenames are required"
@@ -449,6 +489,8 @@ create_env() {
   create_device_manager_env $config $ENV
   echo "Configuration replicated in device-manager"
 
+  create_device_manager_graphql_env $config $ENV
+  echo "Configuration replicated in device-manager-graphql"
 }
 
 init_project () {
