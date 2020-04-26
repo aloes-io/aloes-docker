@@ -10,6 +10,7 @@ if [[ ! -d "$DIR" ]]; then DIR="$PWD"; fi
 . "$DIR/helpers/log.sh"
 . "$DIR/helpers/start.sh"
 . "$DIR/helpers/stop.sh"
+. "$DIR/helpers/pull.sh"
 . "$DIR/helpers/letsencrypt-init.sh"
 
 usage() {
@@ -19,7 +20,9 @@ Commands :
 	- build
 	- start
 	- stop
-	- log"
+	- pull
+	- log
+  "
 }
 
 get_env_name() {
@@ -75,21 +78,24 @@ get_uuid() {
 
 is_valid_command() {
   case "$1" in
-	  'create')
-  		return 0
-	    ;;
-	  'build')
-  		return 0
-	    ;;
-	  'start')
-  		return 0
-	    ;;
+		'create')
+      return 0
+      ;;
+    'build')
+      return 0
+      ;;
+    'start')
+      return 0
+      ;;
 		'stop')
-  		return 0
-	    ;;
-	  'log')
-  		return 0
-	    ;; 
+      return 0
+      ;;
+    'pull')
+      return 0
+      ;;
+    'log')
+      return 0
+    ;; 
   esac
   return 1
 }
@@ -100,14 +106,14 @@ is_valid_command() {
 
 # if no argument passed, prompt user to get command and environment
 if [ -z "$1" ]; then
-	echo "Type the command you want to execute (create|build|start|stop|log), followed by [ENTER]:"
+	echo "Type the command you want to execute (create|build|start|stop|pull|log), followed by [ENTER]:"
 	read CMD
 	if is_valid_command "$CMD"; then
     echo "Type the environment used to execute $CMD (local|production), followed by [ENTER]:"
 		read ENV
 	else
-	  usage
-	  exit 1
+    usage
+    exit 1
 	fi
 fi
 
@@ -120,10 +126,10 @@ case $key in
   -c|--command)
       CMD="$2"
       if ! is_valid_command "$CMD"; then 
-      	usage
-      	exit 1
+        usage
+        exit 1
       else
-      	shift
+        shift
       fi
       ;;
   -e|--env)
@@ -135,9 +141,9 @@ case $key in
       shift
       ;;
   *)
-  	usage
+    usage
     exit 1
-  	;;
+    ;;
 esac
 shift # past argument or value
 done
@@ -160,6 +166,9 @@ elif [ "$CMD" == "log" ]; then
 elif [ "$CMD" == "create" ]; then
 	create $ENV
     # read -p "Would you like to build your project now ? (y/N) " answer
+elif [ "$CMD" == "pull" ]; then
+	echo "$CMD $ENV containers"
+	pull $ENV $SERVICE
 elif [ "$CMD" == "delete" ]; then
 	echo "$CMD containers for $ENV environment"
 	# not working yet

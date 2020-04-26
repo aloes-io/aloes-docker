@@ -324,8 +324,6 @@ create_env() {
 
   read -p "Would you like to configure Aloes GraphQL API ? (y/N) " answer
   if [ "$answer" == "Y" ] || [ "$answer" == "y" ]; then
-    # INSTANCES_COUNT=1
-    # INSTANCES_PREFIX=
     env_keys=(GRAPHQL_SERVER_PATH GRAPHQL_HTTP_SERVER_PORT GRAPHQL_WS_SERVER_PORT)
     for env_key in "${env_keys[@]}"; do
       get_value_from_user $env_key $config_tmp $from_env
@@ -365,8 +363,6 @@ create_env() {
       fi
       set_env HTTP_SECURE "" $config_tmp
       set_env MQTT_SECURE "" $config_tmp
-      # echo "HTTP_SECURE=" >> "$config"
-      # echo "MQTT_SECURE=" >> "$config"
     fi
   fi
 
