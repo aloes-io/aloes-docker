@@ -1,4 +1,4 @@
-# Copyright 2019 Edouard Maleix, read LICENSE
+# Copyright 2020 Edouard Maleix, read LICENSE
 
 worker_processes 8;
 
@@ -73,17 +73,20 @@ http {
   }
 
   upstream aloes_graphql_api_servers {
-    least_conn;
-    server graphql-api:${GRAPHQL_HTTP_SERVER_PORT}${GRAPHQL_SERVER_PATH};
+    server graphql-api:${GRAPHQL_HTTP_SERVER_PORT};
   }
 
   upstream aloes_graphql_ws_api_servers {
-    least_conn;
-    server graphql-api:${GRAPHQL_WS_SERVER_PORT}${GRAPHQL_SERVER_PATH};
+    server graphql-api:${GRAPHQL_WS_SERVER_PORT};
   }
 
   upstream timer_load_balancers {
     server timer-proxy:80;
+  }
+
+  upstream aloes_http_client_servers {
+    least_conn;
+    server client:8080;
   }
 
   log_format custom_combined '$server_addr - $remote_addr [$time_local] "$request" $status $body_bytes_sent $upstream_addr "$http_referer" "$http_user_agent"';
@@ -140,10 +143,14 @@ http {
     location / {
       # fix double slashed urls
       # rewrite (.*)//+(.*) $1/$2 break;
-
-      root   /etc/nginx/html;
-      index  index.html index.htm;
-      try_files $uri $uri/ /index.html;
+      proxy_pass http://aloes_http_client_servers;
+      proxy_redirect off;
+      proxy_http_version 1.1;
+      proxy_read_timeout 90;
+      
+      # root   /etc/nginx/html;
+      # index  index.html index.htm;
+      # try_files $uri $uri/ /index.html;
       expires $expires;
       gzip_static on;
     }
