@@ -1,6 +1,6 @@
 # Aloes-docker is a process manager to help deploying a complete aloes ecosystem
 
-# Copyright 2019 Edouard Maleix
+# Copyright 2020 Edouard Maleix
 
 # Aloes-docker is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
@@ -219,7 +219,7 @@ services:
     container_name: async-api-1
     env_file: ./config/device-manager/.env
     environment:
-      - SERVER_LOGGER_LEVEL=4
+      - SERVER_LOGGER_LEVEL=3
     volumes:
       - ./config/device-manager/.env:/home/node/device-manager/.env:ro
     restart: always
@@ -234,7 +234,7 @@ services:
     container_name: async-api-2
     env_file: ./config/device-manager/.env
     environment:
-      - SERVER_LOGGER_LEVEL=4
+      - SERVER_LOGGER_LEVEL=3
     volumes:
       - ./config/device-manager/.env:/home/node/device-manager/.env:ro
     restart: always
@@ -250,7 +250,7 @@ services:
     container_name: rest-api-1
     env_file: ./config/device-manager/.env
     environment:
-      - SERVER_LOGGER_LEVEL=4
+      - SERVER_LOGGER_LEVEL=3
       - INSTANCES_COUNT=2
       - INSTANCES_PREFIX=1
       # - HTTP_INSTANCES_COUNT=6
@@ -275,7 +275,7 @@ services:
     container_name: rest-api-2
     env_file: ./config/device-manager/.env
     environment:
-      - SERVER_LOGGER_LEVEL=4
+      - SERVER_LOGGER_LEVEL=3
       - INSTANCES_COUNT=2
       - INSTANCES_PREFIX=2
     restart: always
@@ -299,7 +299,7 @@ services:
     container_name: rest-api-3
     env_file: ./config/device-manager/.env
     environment:
-      - SERVER_LOGGER_LEVEL=4
+      - SERVER_LOGGER_LEVEL=3
       - INSTANCES_COUNT=2
       - INSTANCES_PREFIX=3
     restart: always
@@ -375,7 +375,8 @@ services:
       - HTTP_SERVER_PORT=${HTTP_SERVER_PORT}
       - GRAPHQL_HTTP_SERVER_PORT=${GRAPHQL_HTTP_SERVER_PORT}
       - GRAPHQL_WS_SERVER_PORT=${GRAPHQL_WS_SERVER_PORT}
-      - GRAPHQL_PATH=${GRAPHQL_SERVER_PATH}
+      - GRAPHQL_HTTP_SERVER_PATH=${GRAPHQL_HTTP_SERVER_PATH}
+      - GRAPHQL_WS_SERVER_PATH=${GRAPHQL_WS_SERVER_PATH}
       - PROXY_HTTP_SERVER_PORT=${PROXY_HTTP_SERVER_PORT}
       - PROXY_HTTPS_SERVER_PORT=${PROXY_HTTPS_SERVER_PORT}
       - PROXY_MQTT_BROKER_PORT=${PROXY_MQTT_BROKER_PORT}

@@ -171,11 +171,12 @@ ALOES_KEY=$(read_var ALOES_KEY $config)
 ALOES_SERVER_URL=$ALOES_SERVER_URL
 ALOES_BROKER_URL=$ALOES_BROKER_URL
 ALOES_SERVER_API_ROOT=$(read_var REST_API_ROOT $config)
-HTTP_SERVER_HOST=0.0.0.0
+GRAPHQL_HTTP_PATH=$(read_var GRAPHQL_HTTP_SERVER_PATH $config)
+HTTP_SERVER_HOST=$(read_var GRAPHQL_HTTP_SERVER_HOST $config)
 HTTP_SERVER_PORT=$(read_var GRAPHQL_HTTP_SERVER_PORT $config)
-WS_SERVER_HOST=0.0.0.0
-WS_SERVER_PORT=$(read_var GRAPHQL_WS_SERVER_PORT $config)
-GRAPHQL_PATH=$(read_var GRAPHQL_SERVER_PATH $config)" >> "$aloes_config"
+GRAPHQL_WS_PATH=$(read_var GRAPHQL_WS_SERVER_PATH $config)
+WS_SERVER_HOST=$(read_var GRAPHQL_WS_SERVER_HOST $config)
+WS_SERVER_PORT=$(read_var GRAPHQL_WS_SERVER_PORT $config)" >> "$aloes_config"
 
 }
 
@@ -225,8 +226,11 @@ MQTT_SECURE=$(read_var MQTT_SECURE $from)
 MQTT_TRUST_PROXY=$(read_var MQTT_TRUST_PROXY $from)
 SERVER_LOGGER_LEVEL=$(read_var SERVER_LOGGER_LEVEL $from)
 # ALOES GRAPHQL API CONFIG
-GRAPHQL_SERVER_PATH=$(read_var GRAPHQL_SERVER_PATH $from)
+GRAPHQL_HTTP_SERVER_HOST=$(read_var GRAPHQL_HTTP_SERVER_HOST $from)
+GRAPHQL_HTTP_SERVER_PATH=$(read_var GRAPHQL_HTTP_SERVER_PATH $from)
 GRAPHQL_HTTP_SERVER_PORT=$(read_var GRAPHQL_HTTP_SERVER_PORT $from)
+GRAPHQL_WS_SERVER_HOST=$(read_var GRAPHQL_WS_SERVER_HOST $from)
+GRAPHQL_WS_SERVER_PATH=$(read_var GRAPHQL_WS_SERVER_PATH $from)
 GRAPHQL_WS_SERVER_PORT=$(read_var GRAPHQL_WS_SERVER_PORT $from)
 # VUE APP CONFIG
 VUE_APP_SERVER_URL=$HTTP_SERVER_URL 
@@ -364,7 +368,7 @@ create_env() {
 
   read -p "Would you like to configure Aloes GraphQL API ? (y/N) " answer
   if [ "$answer" == "Y" ] || [ "$answer" == "y" ]; then
-    env_keys=(GRAPHQL_SERVER_PATH GRAPHQL_HTTP_SERVER_PORT GRAPHQL_WS_SERVER_PORT)
+    env_keys=(GRAPHQL_HTTP_SERVER_PATH GRAPHQL_HTTP_SERVER_PORT GRAPHQL_WS_SERVER_PATH GRAPHQL_WS_SERVER_PORT)
     for env_key in "${env_keys[@]}"; do
       get_value_from_user $env_key $config_tmp $from_env
       set_env $env_key $USER_VAL $config_tmp
