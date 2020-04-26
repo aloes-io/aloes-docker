@@ -323,16 +323,6 @@ services:
     hostname: graphql-api
     container_name: graphql-api
     env_file: ./config/device-manager-graphql/.env
-    # environment:
-    #   - ALOES_ID=${ALOES_ID}
-    #   - ALOES_KEY=${ALOES_KEY}
-    #   - HTTP_SERVER_PORT=${GRAPHQL_HTTP_SERVER_PORT}
-    #   - WS_SERVER_PORT=${GRAPHQL_WS_SERVER_PORT}
-    #   - GRAPHQL_PATH=${GRAPHQL_SERVER_PATH}
-    #   - ALOES_SERVER_URL=${PROXY_HTTP_SERVER_URL}
-    #   - ALOES_SERVER_API_ROOT=${REST_API_ROOT}
-    #   - ALOES_BROKER_URL=${PROXY_MQTT_BROKER_URL}
-    #   # - ALOES_BROKER_URL=${PROXY_WS_BROKER_URL}
     restart: always
     volumes:
       - ./config/device-manager-graphql/.env:/home/node/app/.env:ro

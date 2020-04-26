@@ -86,7 +86,7 @@ chmod a+x ./config/redis/redisdump.sh
 ./config/redis/redisdump.sh -c aloes-docker_redis_1 -d /data
 
 chmod a+x ./config/redis/redisrestore.sh
-./config/influx/redisrestore.sh -s ./dump_file -c aloes-docker_redis_1 -d /data
+./config/redis/redisrestore.sh -s ./dump.rdb -c aloes-docker_redis_1 -d /data -p example
 ```
 
 ## Display config

@@ -1,7 +1,5 @@
 FROM nginx:latest
 
-# COPY --from=aloes/aloes-client:latest /home/node/aloes-client/dist /etc/nginx/html
-
 RUN rm /etc/nginx/conf.d/default.conf
 
 RUN mkdir -p /var/www/certbot
