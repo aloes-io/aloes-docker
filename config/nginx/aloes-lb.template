@@ -55,7 +55,6 @@ http {
   }
 
   upstream aloes_graphql_ws_api_servers {
-    # server graphql-api:${GRAPHQL_WS_SERVER_PORT}/${GRAPHQL_WS_SERVER_PATH};
     server graphql-api:${GRAPHQL_WS_SERVER_PORT};
   }
 
@@ -100,8 +99,6 @@ http {
     gzip_disable msie6;
 
     location / {
-      # fix double slashed urls
-      # rewrite (.*)//+(.*) $1/$2 break;
       proxy_pass http://aloes_http_client_servers;
       proxy_redirect off;
       proxy_http_version 1.1;
@@ -137,11 +134,7 @@ http {
       proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     }
 
-    location /${GRAPHQL_HTTP_SERVER_PATH} {
-      # if ($request_uri ~* "/graphql(/.*$)") {
-      #   set  $path_remainder  $1;
-      # }
-      # proxy_pass http://aloes_graphql_http_api_servers$path_remainder;
+    location ${GRAPHQL_HTTP_SERVER_PATH} {
       proxy_pass http://aloes_graphql_http_api_servers;
       proxy_redirect off;
       proxy_http_version 1.1;
@@ -151,7 +144,7 @@ http {
       proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     }
     
-    location /${GRAPHQL_WS_SERVER_PATH} {
+    location ${GRAPHQL_WS_SERVER_PATH} {
       proxy_pass http://aloes_graphql_ws_api_servers;
       proxy_redirect off;
       proxy_http_version 1.1;

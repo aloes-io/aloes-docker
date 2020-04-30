@@ -143,14 +143,14 @@ http {
     location / {
       # fix double slashed urls
       # rewrite (.*)//+(.*) $1/$2 break;
+      # root   /etc/nginx/html;
+      # index  index.html index.htm;
+      # try_files $uri $uri/ /index.html;
+
       proxy_pass http://aloes_http_client_servers;
       proxy_redirect off;
       proxy_http_version 1.1;
       proxy_read_timeout 90;
-      
-      # root   /etc/nginx/html;
-      # index  index.html index.htm;
-      # try_files $uri $uri/ /index.html;
       expires $expires;
       gzip_static on;
     }
@@ -184,7 +184,7 @@ http {
       proxy_set_header Access-Control-Allow-Origin $cors_header;
     }
 
-    location /graphql {
+    location ${GRAPHQL_HTTP_SERVER_PATH} {
       proxy_pass http://aloes_graphql_api_servers;
       proxy_redirect off;
       proxy_http_version 1.1;
@@ -194,7 +194,7 @@ http {
       proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     }
     
-    location /subscription {
+    location ${GRAPHQL_WS_SERVER_PATH} {
       proxy_pass http://aloes_graphql_ws_api_servers;
       proxy_redirect off;
       proxy_http_version 1.1;
