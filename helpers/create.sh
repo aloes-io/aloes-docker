@@ -112,7 +112,6 @@ INFLUXDB_DB=$(read_var INFLUXDB_DB $config)
 INFLUXDB_USER=$(read_var INFLUXDB_USER $config)
 INFLUXDB_USER_PASSWORD=$(read_var INFLUXDB_USER_PASSWORD $config)
 OCD_API_KEY=$(read_var OCD_API_KEY $config)
-EXTERNAL_TIMER=$(read_var EXTERNAL_TIMER $config)
 TIMER_SERVER_URL=$(read_var TIMER_SERVER_URL $config)
 FS_PATH=./storage
 GITHUB_CLIENT_ID_LOGIN=$(read_var GITHUB_CLIENT_ID_LOGIN $config)
@@ -131,7 +130,7 @@ INSTANCES_COUNT=1" >> "$aloes_config"
   # $${MONGO_HOST},$${MONGO_PORT},$${MONGO_COLLECTION},$${MONGO_ADMIN_USERNAME},$${MONGO_ADMIN_PASSWORD},$${MONGO_USER},$${MONGO_PASS},\
   # $${REDIS_HOST},$${REDIS_PORT},$${REDIS_MQTT_PERSISTENCE},$${REDIS_MQTT_EVENTS},$${REDIS_COLLECTIONS},$${REDIS_PASS},\
   # $${INFLUXDB_HOST},$${INFLUXDB_PORT},$${INFLUXDB_DB},$${INFLUX_ADMIN_ENABLED},$${INFLUX_ADMIN_USER},$${INFLUX_ADMIN_PASSWORD},$${INFLUXDB_USER},$${INFLUXDB_USER_PASSWORD},\
-  # $${OCD_API_KEY},$${EXTERNAL_TIMER},$${TIMER_SERVER_URL},$${TIMER_SERVER_PORT},\
+  # $${OCD_API_KEY},$${TIMER_SERVER_URL},$${TIMER_SERVER_PORT},\
   # $${GITHUB_CLIENT_ID_LOGIN},$${GITHUB_CLIENT_SECRET_LOGIN},$${GITHUB_CLIENT_ID_LINK},$${GITHUB_CLIENT_SECERT_LINK},$${GIT_REPO_SSH_URL}\
   # $${LB_SERVER_HOST},$${LB_HTTP_SERVER_PORT},$${LB_TCP_SERVER_PORT},\
   # $${PROXY_SERVER_HOST},$${PROXY_DOMAIN},$${PROXY_EXTENSION},$${PROXY_IP},$${PROXY_HTTP_CLIENT_URL},$${PROXY_HTTPS_CLIENT_URL},$${PROXY_HTTP_SERVER_PORT},\
@@ -269,7 +268,6 @@ INFLUXDB_USER_PASSWORD=$(read_var INFLUXDB_USER_PASSWORD $from)
 # OPEN CAGE CONFIG
 OCD_API_KEY=$(read_var OCD_API_KEY $from)
 # TIMER CONFIG
-EXTERNAL_TIMER=$(read_var EXTERNAL_TIMER $from)
 TIMER_SERVER_URL=$(read_var TIMER_SERVER_URL $from)
 # GITHUB CONFIG
 GITHUB_CLIENT_ID_LOGIN=$(read_var GITHUB_CLIENT_ID_LOGIN $from)
@@ -413,20 +411,15 @@ create_env() {
 
   read -p "Would you like to configure external timer ? (y/N) " answer
   if [ "$answer" == "Y" ] || [ "$answer" == "y" ]; then
-    if [ "$from_env" == "1" ]; then
-      del_env EXTERNAL_TIMER $config_tmp
-    fi
-    set_env EXTERNAL_TIMER true $config_tmp
+    # if [ "$from_env" == "1" ]; then
+    #   del_env EXTERNAL_TIMER $config_tmp
+    # fi
+    # set_env EXTERNAL_TIMER true $config_tmp
     env_keys=(TIMER_SERVER_URL)
     for env_key in "${env_keys[@]}"; do
       get_value_from_user $env_key $config_tmp $from_env
       set_env $env_key $USER_VAL $config_tmp
     done
-  # else
-  #   if [ "$from_env" == "1" ]; then
-  #     del_env EXTERNAL_TIMER $config_tmp
-  #   fi
-  #   set_env EXTERNAL_TIMER "" $config_tmp
   fi
 
   read -p "Would you like to configure MongoDB container ? (y/N) " answer
