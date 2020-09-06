@@ -11,5 +11,6 @@ RUN mkdir /etc/letsencrypt
 CMD envsubst '$${HTTP_SERVER_PORT},$${WS_BROKER_PORT},$${MQTT_BROKER_PORT},\
 $${GRAPHQL_HTTP_SERVER_PORT},$${GRAPHQL_WS_SERVER_PORT},$${GRAPHQL_HTTP_SERVER_PATH},$${GRAPHQL_WS_SERVER_PATH},\
 $${PROXY_MQTT_BROKER_PORT},$${PROXY_MQTTS_BROKER_PORT},$${PROXY_HTTP_SERVER_PORT},$${PROXY_HTTPS_SERVER_PORT},\
+$${MONGO_PORT},$${REDIS_PORT},$${INFLUXDB_PORT},\
 $${PROXY_SERVER_HOST},$${PROXY_DOMAIN},$${PROXY_EXTENSION}' < /etc/nginx/nginx.template > /etc/nginx/nginx.conf ; \
 while :; do sleep 6h & wait ${!}; nginx -s reload; done & nginx -g 'daemon off;'

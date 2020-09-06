@@ -73,15 +73,19 @@ http {
   }
 
   upstream aloes_graphql_http_api_servers {
-    server graphql-api:${GRAPHQL_HTTP_SERVER_PORT};
+    server graphql-api:${GRAPHQL_HTTP_SERVER_PORT} max_fails=0; 
   }
 
   upstream aloes_graphql_ws_api_servers {
-    server graphql-api:${GRAPHQL_WS_SERVER_PORT};
+    server graphql-api:${GRAPHQL_WS_SERVER_PORT} max_fails=0;
   }
 
   upstream timer_load_balancers {
     server timer-proxy:80;
+  }
+
+  upstream influx_server {
+    server influxdb:${INFLUXDB_PORT};
   }
 
   upstream aloes_http_client_servers {
@@ -207,6 +211,7 @@ http {
       proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     }
 
+    ## SKYRING TIMERS PROXY
     location /timer {
       # todo : only authorize requests coming from aloes containers 
       proxy_pass http://timer_load_balancers;
@@ -215,6 +220,14 @@ http {
       proxy_read_timeout 90;
       proxy_set_header Host $http_host;
       proxy_set_header X-Scheme $scheme;
+    }
+
+    ## INFLUXDB PROXY
+    location /influxdb/ {
+      proxy_pass http://influx_server;
+      rewrite ^/influxdb/(.*) /$1 break;
+      proxy_redirect off;
+      proxy_set_header Host $host;
     }
 
     error_page   500 502 503 504  /50x.html;
@@ -228,9 +241,6 @@ http {
 stream {
   log_format mqtt '$server_addr - $remote_addr [$time_local] $protocol $status $bytes_received $bytes_sent $upstream_addr';
 
-  access_log /var/log/nginx/mqtt-access.log mqtt buffer=32k flush=1m;
-  error_log /var/log/nginx/mqtt-error.log; # Health check notifications
-
   upstream aloes_mqtt_api_servers {
     least_conn;
     server async-api-1:${MQTT_BROKER_PORT};
@@ -238,6 +248,8 @@ stream {
   }
 
   server {
+    access_log /var/log/nginx/mqtt-access.log mqtt buffer=32k flush=1m;
+    error_log /var/log/nginx/mqtt-error.log; # Health check notifications
     listen ${PROXY_MQTT_BROKER_PORT};
     listen [::]:${PROXY_MQTT_BROKER_PORT} ipv6only=on;
 
@@ -249,20 +261,15 @@ stream {
     # proxy_socket_keepalive on;
   }
 
-
   server {
     listen ${PROXY_MQTTS_BROKER_PORT} ssl;
     listen [::]:${PROXY_MQTTS_BROKER_PORT} ipv6only=on ssl;
-
     proxy_pass aloes_mqtt_api_servers;
     proxy_protocol on;
     proxy_connect_timeout 5s;
     # proxy_read_timeout 999950s; 
     # proxy_timeout 60s;
-
     proxy_ssl off;
-    # proxy_ssl_name ${PROXY_SERVER_HOST};
-    # proxy_ssl_server_name on;
 
     # following statements will be valid after running ./helpers/letsencrypt-init.sh
     ssl_certificate /etc/letsencrypt/live/${PROXY_SERVER_HOST}/fullchain.pem;
@@ -276,4 +283,49 @@ stream {
     ssl_handshake_timeout 10s;
     # ssl_session_tickets on;
   }
+
+  ## MONGO PROXY
+  upstream stream_mongo {
+    server mongo:${MONGO_PORT};
+  }
+
+  server {
+    listen ${MONGO_PORT} ssl so_keepalive=on;
+    proxy_pass stream_mongo;
+    proxy_connect_timeout 2s;
+    proxy_timeout 10m;
+
+    ssl_certificate /etc/letsencrypt/live/${PROXY_SERVER_HOST}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${PROXY_SERVER_HOST}/privkey.pem;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    ssl_protocols         TLSv1 TLSv1.1 TLSv1.2;
+    ssl_ciphers           HIGH:!aNULL:!MD5;
+    ssl_session_cache   shared:SSL:20m;
+    ssl_session_timeout 8h;
+    ssl_handshake_timeout 10s;
+  }
+
+  ## REDIS PROXY
+  upstream stream_redis {
+    server redis:${REDIS_PORT};
+  }
+
+  server {
+    listen ${REDIS_PORT} ssl so_keepalive=on;
+    proxy_pass stream_redis;
+    proxy_connect_timeout 2s;
+    proxy_timeout 10m;
+
+    ssl_certificate /etc/letsencrypt/live/${PROXY_SERVER_HOST}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${PROXY_SERVER_HOST}/privkey.pem;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    ssl_protocols         TLSv1 TLSv1.1 TLSv1.2;
+    ssl_ciphers           HIGH:!aNULL:!MD5;
+    ssl_session_cache   shared:SSL:20m;
+    ssl_session_timeout 8h;
+    ssl_handshake_timeout 10s;
+  }
+
 }

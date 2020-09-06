@@ -62,6 +62,18 @@ http {
     server timer-proxy:80;
   }
 
+  upstream skyring {
+    server timer-1:3000;
+    server timer-2:3000;
+    server timer-3:3000;
+    server timer-4:3000;
+    server timer-5:3000;
+  }
+
+  upstream influx_server {
+    server influxdb:${INFLUXDB_PORT};
+  }
+
   upstream aloes_http_client_servers {
     least_conn;
     server client:8080;
@@ -81,18 +93,27 @@ http {
     # real_ip_recursive   on;
 
     include  mime.types;
+    # default_type  application/octet-stream;
     types { 
       application/json map; 
     }
     charset utf-8;
     source_charset utf-8;
 
+    # sendfile        on;
+    # tcp_nopush     on;
+
+    # keepalive_timeout  0;
+    # keepalive_timeout  65;
+    # proxy_read_timeout 200;
+    # proxy_next_upstream error;
+
     gzip on;
     gzip_buffers 16 8k;
     gzip_comp_level 6;
     gzip_http_version 1.1;
     gzip_min_length 10;
-    gzip_types text/plain text/css text/xml text/javascript application/javascript application/x-javascript application/xml;
+    gzip_types text/plain text/css text/xml text/javascript application/javascript application/x-javascript application/xml application/x-json;
     gzip_vary on;
     gzip_proxied any; # Compression for all requests.
     # gzip_proxied expired no-cache no-store private auth;
@@ -157,6 +178,7 @@ http {
       proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     }
 
+    ## SKYRING TIMERS PROXY
     location /timer {
       # todo : only authorize requests coming from aloes containers
       proxy_pass http://timer_load_balancers;
@@ -166,6 +188,18 @@ http {
       proxy_set_header Host $http_host;
       proxy_set_header X-Scheme $scheme;
       proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+      # proxy_pass_header Server;
+      # proxy_set_header X-Real-IP $remote_addr;
+      # proxy_pass http://skyring;
+    }
+
+    ## INFLUXDB PROXY
+    location /influxdb/ {
+      proxy_pass http://influx_server;
+      rewrite ^/influxdb/(.*) /$1 break;
+      proxy_redirect off;
+      proxy_set_header Host $host;
     }
 
     location /.well-known/acme-challenge/ {
@@ -184,8 +218,8 @@ http {
 stream {
   log_format mqtt '$server_addr - $remote_addr [$time_local] $protocol $status $bytes_received $bytes_sent $upstream_addr';
 
-  access_log /var/log/nginx/mqtt-access.log mqtt buffer=32k flush=1m;
-  error_log /var/log/nginx/mqtt-error.log; # Health check notifications
+  # access_log /var/log/nginx/mqtt-access.log mqtt buffer=32k flush=1m;
+  # error_log /var/log/nginx/mqtt-error.log; # Health check notifications
 
   upstream aloes_mqtt_api_servers {
     least_conn;
@@ -194,9 +228,10 @@ stream {
   }
 
   server {
+    access_log /var/log/nginx/mqtt-access.log mqtt buffer=32k flush=1m;
+    error_log /var/log/nginx/mqtt-error.log; # Health check notifications
     listen ${PROXY_MQTT_BROKER_PORT};
     listen [::]:${PROXY_MQTT_BROKER_PORT} ipv6only=on;
-
     proxy_pass aloes_mqtt_api_servers;
     proxy_protocol on;
     proxy_connect_timeout 5s;
@@ -204,4 +239,27 @@ stream {
     # proxy_read_timeout 999950s; 
   }
 
+  ## MONGO PROXY
+  upstream stream_mongo {
+    server mongo:${MONGO_PORT};
+  }
+
+  server {
+    listen ${MONGO_PORT} so_keepalive=on;
+    proxy_pass stream_mongo;
+    proxy_connect_timeout 2s;
+    proxy_timeout 10m;
+  }
+
+  ## REDIS PROXY
+  upstream stream_redis {
+    server redis:${REDIS_PORT};
+  }
+
+  server {
+    listen ${REDIS_PORT} so_keepalive=on;
+    proxy_pass stream_redis;
+    proxy_connect_timeout 2s;
+    proxy_timeout 10m;
+  }
 }
